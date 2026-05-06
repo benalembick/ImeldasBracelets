@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Imelda’s Bracelets
 
 Simple e-commerce demo site built with HTML, CSS, and vanilla JavaScript, now with Stripe test payments.
@@ -51,3 +52,6 @@ Payments are in test mode and won't charge real cards.
 - Cart data is stored in `localStorage`.
 - Product pages are generated from mock data in `script.js`.
 - Checkout uses Stripe Elements for secure payment processing.
+=======
+# ImeldasBracelets
+>>>>>>> cd146a84d468364eda8cdcb1f63c8ab63062ebea
