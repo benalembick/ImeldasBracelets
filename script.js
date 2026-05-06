@@ -43,11 +43,13 @@ const defaultProducts = [
   }
 ];
 
-const cartKey = "imeldasBraceletsCart";
-const productKey = "imeldasBraceletsProducts";
-const adminUsersKey = "imeldasBraceletsAdminUsers";
-const adminSessionKey = "imeldasBraceletsAdminSession";
-const slideshowKey = "imeldasBraceletsHeroSlideshow";
+const cartCookieName = "imeldasBraceletsCartId";
+const adminSessionCookieName = "imeldasBraceletsAdminSession";
+const slideshowSettingKey = "hero_slideshow";
+
+let supabaseClient = null;
+let supabaseReady = false;
+let warnedAboutSupabase = false;
 
 const defaultSlideshow = {
   intervalSeconds: 4,
@@ -79,119 +81,270 @@ function slugify(value) {
     .slice(0, 60);
 }
 
-function saveProducts(products) {
-  localStorage.setItem(productKey, JSON.stringify(products));
+function readCookie(name) {
+  const cookie = document.cookie
+    .split("; ")
+    .find((item) => item.startsWith(`${name}=`));
+  return cookie ? decodeURIComponent(cookie.split("=").slice(1).join("=")) : "";
 }
 
-function getProducts() {
-  const stored = localStorage.getItem(productKey);
-  if (!stored) return [...defaultProducts];
+function writeCookie(name, value, maxAgeSeconds = 60 * 60 * 24 * 365) {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSeconds}; SameSite=Lax`;
+}
+
+function clearCookie(name) {
+  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
+}
+
+function createId(prefix) {
+  const randomPart = typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${prefix}-${randomPart}`;
+}
+
+function getCartId() {
+  const existing = readCookie(cartCookieName);
+  if (existing) return existing;
+
+  const next = createId("cart");
+  writeCookie(cartCookieName, next);
+  return next;
+}
+
+async function initSupabase() {
+  if (supabaseReady) return supabaseClient;
 
   try {
-    const parsed = JSON.parse(stored);
-    if (Array.isArray(parsed)) {
-      return parsed.filter((product) => product && product.id && product.name && Number.isFinite(Number(product.price)));
+    const response = await fetch("/supabase-config");
+    const config = response.ok ? await response.json() : {};
+    const url = config.url || window.SUPABASE_URL || "";
+    const anonKey = config.anonKey || window.SUPABASE_ANON_KEY || "";
+
+    if (url && anonKey && window.supabase) {
+      supabaseClient = window.supabase.createClient(url, anonKey);
     }
   } catch (_error) {
-    return [...defaultProducts];
+    supabaseClient = null;
   }
 
-  return [...defaultProducts];
+  supabaseReady = true;
+  return supabaseClient;
 }
 
-function ensureProductCatalog() {
-  if (!localStorage.getItem(productKey)) {
-    saveProducts(defaultProducts);
+async function getDb() {
+  const db = await initSupabase();
+  if (!db && !warnedAboutSupabase) {
+    console.warn("Supabase is not configured. Add SUPABASE_URL and SUPABASE_ANON_KEY to your server environment.");
+    warnedAboutSupabase = true;
   }
+  return db;
 }
 
-function getAdminUsers() {
-  const stored = localStorage.getItem(adminUsersKey);
-  if (!stored) return [];
-
-  try {
-    const parsed = JSON.parse(stored);
-    if (Array.isArray(parsed)) {
-      return parsed.filter((user) => user && user.username && user.password);
-    }
-  } catch (_error) {
-    return [];
-  }
-
-  return [];
-}
-
-function saveAdminUsers(users) {
-  localStorage.setItem(adminUsersKey, JSON.stringify(users));
-}
-
-function ensureAdminUsers() {
-  const users = getAdminUsers();
-  if (users.length === 0) {
-    saveAdminUsers([{ username: "admin", password: "admin123" }]);
-  }
+function normalizeProducts(products) {
+  return products
+    .filter((product) => product && product.id && product.name && Number.isFinite(Number(product.price)))
+    .map((product) => ({
+      id: product.id,
+      name: product.name,
+      price: Number(product.price),
+      image: product.image,
+      description: product.description
+    }));
 }
 
 function getAdminSession() {
-  return localStorage.getItem(adminSessionKey);
+  return readCookie(adminSessionCookieName);
 }
 
 function setAdminSession(username) {
-  localStorage.setItem(adminSessionKey, username);
+  writeCookie(adminSessionCookieName, username, 60 * 60 * 12);
 }
 
 function clearAdminSession() {
-  localStorage.removeItem(adminSessionKey);
+  clearCookie(adminSessionCookieName);
 }
 
-function getSlideshowSettings() {
-  const stored = localStorage.getItem(slideshowKey);
-  if (!stored) return { ...defaultSlideshow, images: [...defaultSlideshow.images] };
+async function saveProducts(products) {
+  const db = await getDb();
+  if (!db) return;
 
-  try {
-    const parsed = JSON.parse(stored);
-    const images = Array.isArray(parsed.images)
-      ? parsed.images
+  const rows = normalizeProducts(products);
+  const { error } = await db.from("products").upsert(rows, { onConflict: "id" });
+  if (error) throw error;
+}
+
+async function deleteProductRecord(productId) {
+  const db = await getDb();
+  if (!db) return;
+
+  const { error } = await db.from("products").delete().eq("id", productId);
+  if (error) throw error;
+}
+
+async function getProducts() {
+  const db = await getDb();
+  if (!db) return [...defaultProducts];
+
+  const { data, error } = await db.from("products").select("id,name,price,image,description");
+  if (error) {
+    console.error(error);
+    return [...defaultProducts];
+  }
+
+  const products = normalizeProducts(data || []);
+  return products.length > 0 ? products : [...defaultProducts];
+}
+
+async function ensureProductCatalog() {
+  const db = await getDb();
+  if (!db) return;
+
+  const { count, error } = await db.from("products").select("id", { count: "exact", head: true });
+  if (!error && count === 0) {
+    await saveProducts(defaultProducts);
+  }
+}
+
+async function getAdminUsers() {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { data, error } = await db.from("admin_users").select("username,password").order("username");
+  if (error) {
+    console.error(error);
+    return [];
+  }
+
+  return (data || []).filter((user) => user && user.username && user.password);
+}
+
+async function saveAdminUsers(users) {
+  const db = await getDb();
+  if (!db) return;
+
+  const current = await getAdminUsers();
+  const nextUsernames = users.map((user) => user.username);
+  const removed = current.filter((user) => !nextUsernames.includes(user.username)).map((user) => user.username);
+
+  if (removed.length > 0) {
+    const { error: deleteError } = await db.from("admin_users").delete().in("username", removed);
+    if (deleteError) throw deleteError;
+  }
+
+  if (users.length > 0) {
+    const { error } = await db.from("admin_users").upsert(users, { onConflict: "username" });
+    if (error) throw error;
+  }
+}
+
+async function ensureAdminUsers() {
+  const users = await getAdminUsers();
+  if (users.length === 0) {
+    await saveAdminUsers([{ username: "admin", password: "admin123" }]);
+  }
+}
+
+function normalizeSlideshowSettings(value) {
+  const images = Array.isArray(value && value.images)
+    ? value.images
           .filter((image) => image && image.src)
           .map((image, index) => ({
             id: image.id || `slide-${index + 1}`,
             src: image.src,
             alt: image.alt || "Homepage bracelet slideshow image"
           }))
-      : [];
-    const intervalSeconds = Number(parsed.intervalSeconds);
+    : [];
+  const intervalSeconds = Number(value && value.intervalSeconds);
 
-    return {
-      intervalSeconds: Number.isFinite(intervalSeconds) ? Math.min(Math.max(intervalSeconds, 1), 30) : defaultSlideshow.intervalSeconds,
-      images: images.length > 0 ? images : [...defaultSlideshow.images]
-    };
-  } catch (_error) {
+  return {
+    intervalSeconds: Number.isFinite(intervalSeconds) ? Math.min(Math.max(intervalSeconds, 1), 30) : defaultSlideshow.intervalSeconds,
+    images: images.length > 0 ? images : [...defaultSlideshow.images]
+  };
+}
+
+async function getSlideshowSettings() {
+  const db = await getDb();
+  if (!db) return { ...defaultSlideshow, images: [...defaultSlideshow.images] };
+
+  const { data, error } = await db.from("app_settings").select("value").eq("key", slideshowSettingKey).maybeSingle();
+  if (error || !data) {
+    if (error) console.error(error);
     return { ...defaultSlideshow, images: [...defaultSlideshow.images] };
   }
+
+  return normalizeSlideshowSettings(data.value);
 }
 
-function saveSlideshowSettings(settings) {
-  localStorage.setItem(slideshowKey, JSON.stringify(settings));
+async function saveSlideshowSettings(settings) {
+  const db = await getDb();
+  if (!db) return;
+
+  const { error } = await db.from("app_settings").upsert(
+    { key: slideshowSettingKey, value: normalizeSlideshowSettings(settings) },
+    { onConflict: "key" }
+  );
+  if (error) throw error;
 }
 
-function ensureSlideshowSettings() {
-  if (!localStorage.getItem(slideshowKey)) {
-    saveSlideshowSettings(defaultSlideshow);
+async function ensureSlideshowSettings() {
+  const db = await getDb();
+  if (!db) return;
+
+  const { data, error } = await db.from("app_settings").select("key").eq("key", slideshowSettingKey).maybeSingle();
+  if (!error && !data) {
+    await saveSlideshowSettings(defaultSlideshow);
   }
 }
 
-function getCart() {
-  const cartJSON = localStorage.getItem(cartKey);
-  return cartJSON ? JSON.parse(cartJSON) : [];
+async function getCart() {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { data, error } = await db.from("cart_items").select("product_id,quantity").eq("cart_id", getCartId());
+  if (error) {
+    console.error(error);
+    return [];
+  }
+
+  return (data || [])
+    .filter((item) => item && item.product_id && Number.isFinite(Number(item.quantity)))
+    .map((item) => ({ id: item.product_id, quantity: Number(item.quantity) }));
 }
 
-function saveCart(cart) {
-  localStorage.setItem(cartKey, JSON.stringify(cart));
+async function saveCart(cart) {
+  const db = await getDb();
+  if (!db) return;
+
+  const cartId = getCartId();
+  const { error: deleteError } = await db.from("cart_items").delete().eq("cart_id", cartId);
+  if (deleteError) throw deleteError;
+
+  const rows = cart
+    .filter((item) => item && item.id && Number(item.quantity) > 0)
+    .map((item) => ({
+      cart_id: cartId,
+      product_id: item.id,
+      quantity: Number(item.quantity)
+    }));
+
+  if (rows.length > 0) {
+    const { error } = await db.from("cart_items").insert(rows);
+    if (error) throw error;
+  }
 }
 
-function addToCart(productId) {
-  const cart = getCart();
-  const product = getProducts().find((item) => item.id === productId);
+async function clearCart() {
+  const db = await getDb();
+  if (!db) return;
+
+  const { error } = await db.from("cart_items").delete().eq("cart_id", getCartId());
+  if (error) throw error;
+}
+
+async function addToCart(productId) {
+  const cart = await getCart();
+  const product = (await getProducts()).find((item) => item.id === productId);
   if (!product) return;
 
   const existing = cart.find((item) => item.id === productId);
@@ -201,19 +354,19 @@ function addToCart(productId) {
     cart.push({ id: product.id, quantity: 1 });
   }
 
-  saveCart(cart);
+  await saveCart(cart);
   alert(`${product.name} added to cart!`);
 }
 
-function removeFromCart(productId) {
-  const cart = getCart().filter((item) => item.id !== productId);
-  saveCart(cart);
-  renderCart();
+async function removeFromCart(productId) {
+  const cart = (await getCart()).filter((item) => item.id !== productId);
+  await saveCart(cart);
+  await renderCart();
 }
 
-function calculateCartTotal() {
-  const products = getProducts();
-  const cart = getCart();
+async function calculateCartTotal() {
+  const products = await getProducts();
+  const cart = await getCart();
   return cart.reduce((total, cartItem) => {
     const product = products.find((item) => item.id === cartItem.id);
     return total + (product ? product.price * cartItem.quantity : 0);
@@ -241,12 +394,12 @@ function createProductCard(product) {
   return card;
 }
 
-function renderProductList() {
+async function renderProductList() {
   const list = document.getElementById("product-list");
   if (!list) return;
   list.innerHTML = "";
 
-  const products = getProducts();
+  const products = await getProducts();
   products.forEach((product) => {
     const linkCard = createProductCard(product);
     linkCard.querySelector(".add-button").addEventListener("click", () => addToCart(product.id));
@@ -262,11 +415,13 @@ function renderProductList() {
   });
 }
 
-function renderFeaturedProducts() {
+async function renderFeaturedProducts() {
   const grid = document.getElementById("featured-grid");
   if (!grid) return;
 
-  const featured = getProducts().slice(0, 4);
+  grid.innerHTML = "";
+
+  const featured = (await getProducts()).slice(0, 4);
   featured.forEach((product) => {
     const card = document.createElement("article");
     card.className = "card";
@@ -289,11 +444,11 @@ function renderFeaturedProducts() {
   });
 }
 
-function renderHeroSlideshow() {
+async function renderHeroSlideshow() {
   const slideshow = document.getElementById("hero-slideshow");
   if (!slideshow) return;
 
-  const settings = getSlideshowSettings();
+  const settings = await getSlideshowSettings();
   const images = settings.images;
   slideshow.innerHTML = "";
 
@@ -318,13 +473,13 @@ function renderHeroSlideshow() {
   }, settings.intervalSeconds * 1000);
 }
 
-function renderProductDetail() {
+async function renderProductDetail() {
   const detail = document.getElementById("product-detail");
   if (!detail) return;
 
   const params = new URLSearchParams(window.location.search);
   const productId = params.get("id");
-  const product = getProducts().find((item) => item.id === productId);
+  const product = (await getProducts()).find((item) => item.id === productId);
 
   if (!product) {
     detail.innerHTML = `<p>Product not found. <a href="products.html">Back to shop</a></p>`;
@@ -348,13 +503,13 @@ function renderProductDetail() {
   }
 }
 
-function renderCart() {
+async function renderCart() {
   const cartItemsContainer = document.getElementById("cart-items");
   const cartTotal = document.getElementById("cart-total");
   if (!cartItemsContainer || !cartTotal) return;
 
-  const products = getProducts();
-  const cart = getCart();
+  const products = await getProducts();
+  const cart = await getCart();
   cartItemsContainer.innerHTML = "";
 
   if (cart.length === 0) {
@@ -385,10 +540,10 @@ function renderCart() {
     cartItemsContainer.appendChild(itemEl);
   });
 
-  cartTotal.textContent = `Total: ${formatPrice(calculateCartTotal())}`;
+  cartTotal.textContent = `Total: ${formatPrice(await calculateCartTotal())}`;
 }
 
-function upsertProduct(event) {
+async function upsertProduct(event) {
   event.preventDefault();
 
   const idInput = document.getElementById("product-id");
@@ -410,7 +565,7 @@ function upsertProduct(event) {
     return;
   }
 
-  const products = getProducts();
+  const products = await getProducts();
   const generatedId = slugify(name) || `bracelet-${Date.now()}`;
   const id = existingId || generatedId;
 
@@ -429,15 +584,15 @@ function upsertProduct(event) {
     products.push(product);
   }
 
-  saveProducts(products);
+  await saveProducts(products);
   document.getElementById("admin-form").reset();
   idInput.value = "";
   document.getElementById("admin-submit").textContent = "Add Bracelet";
-  renderAdminProducts();
+  await renderAdminProducts();
 }
 
-function editProduct(productId) {
-  const product = getProducts().find((item) => item.id === productId);
+async function editProduct(productId) {
+  const product = (await getProducts()).find((item) => item.id === productId);
   if (!product) return;
 
   document.getElementById("product-id").value = product.id;
@@ -449,26 +604,25 @@ function editProduct(productId) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function deleteProduct(productId) {
-  const current = getProducts();
+async function deleteProduct(productId) {
+  const current = await getProducts();
   if (current.length <= 1) {
     alert("Keep at least one bracelet in the shop.");
     return;
   }
 
-  const next = current.filter((item) => item.id !== productId);
-  saveProducts(next);
-  saveCart(getCart().filter((item) => item.id !== productId));
-  renderAdminProducts();
+  await deleteProductRecord(productId);
+  await saveCart((await getCart()).filter((item) => item.id !== productId));
+  await renderAdminProducts();
 }
 
-function renderAdminProducts() {
+async function renderAdminProducts() {
   const list = document.getElementById("admin-product-list");
   if (!list) return;
 
   list.innerHTML = "";
 
-  getProducts().forEach((product) => {
+  (await getProducts()).forEach((product) => {
     const item = document.createElement("article");
     item.className = "admin-item";
     item.innerHTML = `
@@ -490,7 +644,7 @@ function renderAdminProducts() {
   });
 }
 
-function renderAdminUsers() {
+async function renderAdminUsers() {
   const userList = document.getElementById("admin-user-list");
   const currentUserName = getAdminSession();
   const currentUserEl = document.getElementById("admin-current-user");
@@ -502,7 +656,7 @@ function renderAdminUsers() {
 
   userList.innerHTML = "";
 
-  getAdminUsers().forEach((user) => {
+  (await getAdminUsers()).forEach((user) => {
     const item = document.createElement("article");
     item.className = "admin-item";
     item.innerHTML = `
@@ -529,12 +683,12 @@ function renderAdminUsers() {
   });
 }
 
-function renderAdminSlideshow() {
+async function renderAdminSlideshow() {
   const list = document.getElementById("admin-slideshow-list");
   const intervalInput = document.getElementById("slideshow-interval");
   if (!list) return;
 
-  const settings = getSlideshowSettings();
+  const settings = await getSlideshowSettings();
   if (intervalInput) {
     intervalInput.value = settings.intervalSeconds;
   }
@@ -562,7 +716,7 @@ function renderAdminSlideshow() {
   });
 }
 
-function saveSlideshowTiming(event) {
+async function saveSlideshowTiming(event) {
   event.preventDefault();
 
   const intervalInput = document.getElementById("slideshow-interval");
@@ -574,9 +728,9 @@ function saveSlideshowTiming(event) {
     return;
   }
 
-  const settings = getSlideshowSettings();
-  saveSlideshowSettings({ ...settings, intervalSeconds });
-  renderAdminSlideshow();
+  const settings = await getSlideshowSettings();
+  await saveSlideshowSettings({ ...settings, intervalSeconds });
+  await renderAdminSlideshow();
 }
 
 function resetSlideshowImageForm() {
@@ -588,7 +742,7 @@ function resetSlideshowImageForm() {
   if (submitButton) submitButton.textContent = "Add Image";
 }
 
-function upsertSlideshowImage(event) {
+async function upsertSlideshowImage(event) {
   event.preventDefault();
 
   const idInput = document.getElementById("slideshow-image-id");
@@ -604,7 +758,7 @@ function upsertSlideshowImage(event) {
     return;
   }
 
-  const settings = getSlideshowSettings();
+  const settings = await getSlideshowSettings();
   const id = existingId || `slide-${Date.now()}`;
   const nextImage = { id, src, alt };
   const existingIndex = settings.images.findIndex((image) => image.id === id);
@@ -615,13 +769,13 @@ function upsertSlideshowImage(event) {
     settings.images.push(nextImage);
   }
 
-  saveSlideshowSettings(settings);
+  await saveSlideshowSettings(settings);
   resetSlideshowImageForm();
-  renderAdminSlideshow();
+  await renderAdminSlideshow();
 }
 
-function editSlideshowImage(imageId) {
-  const image = getSlideshowSettings().images.find((item) => item.id === imageId);
+async function editSlideshowImage(imageId) {
+  const image = (await getSlideshowSettings()).images.find((item) => item.id === imageId);
   if (!image) return;
 
   document.getElementById("slideshow-image-id").value = image.id;
@@ -631,23 +785,23 @@ function editSlideshowImage(imageId) {
   document.getElementById("admin-slideshow-image-form").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function deleteSlideshowImage(imageId) {
-  const settings = getSlideshowSettings();
+async function deleteSlideshowImage(imageId) {
+  const settings = await getSlideshowSettings();
   if (settings.images.length <= 1) {
     alert("Keep at least one slideshow image.");
     return;
   }
 
-  saveSlideshowSettings({
+  await saveSlideshowSettings({
     ...settings,
     images: settings.images.filter((image) => image.id !== imageId)
   });
   resetSlideshowImageForm();
-  renderAdminSlideshow();
+  await renderAdminSlideshow();
 }
 
-function deleteAdminUser(username) {
-  const users = getAdminUsers();
+async function deleteAdminUser(username) {
+  const users = await getAdminUsers();
   if (users.length <= 1) {
     alert("Keep at least one admin user.");
     return;
@@ -659,11 +813,11 @@ function deleteAdminUser(username) {
     return;
   }
 
-  saveAdminUsers(users.filter((user) => user.username !== username));
-  renderAdminUsers();
+  await saveAdminUsers(users.filter((user) => user.username !== username));
+  await renderAdminUsers();
 }
 
-function upsertAdminUser(event) {
+async function upsertAdminUser(event) {
   event.preventDefault();
 
   const originalInput = document.getElementById("admin-user-original");
@@ -680,7 +834,7 @@ function upsertAdminUser(event) {
     return;
   }
 
-  const users = getAdminUsers();
+  const users = await getAdminUsers();
   const usernameTaken = users.find((user) => user.username === username && user.username !== originalUsername);
   if (usernameTaken) {
     alert("That username is already in use.");
@@ -696,7 +850,7 @@ function upsertAdminUser(event) {
     users.push(nextUser);
   }
 
-  saveAdminUsers(users);
+  await saveAdminUsers(users);
   if (getAdminSession() === originalUsername || (!originalUsername && getAdminSession() === username)) {
     setAdminSession(username);
   }
@@ -704,7 +858,7 @@ function upsertAdminUser(event) {
   document.getElementById("admin-user-form").reset();
   originalInput.value = "";
   document.getElementById("admin-user-submit").textContent = "Add User";
-  renderAdminUsers();
+  await renderAdminUsers();
 }
 
 function updateAdminVisibility(isLoggedIn) {
@@ -716,7 +870,7 @@ function updateAdminVisibility(isLoggedIn) {
   dashboardSection.hidden = !isLoggedIn;
 }
 
-function handleAdminLogin(event) {
+async function handleAdminLogin(event) {
   event.preventDefault();
 
   const usernameInput = document.getElementById("admin-login-username");
@@ -725,7 +879,7 @@ function handleAdminLogin(event) {
 
   const username = usernameInput.value.trim();
   const password = passwordInput.value.trim();
-  const user = getAdminUsers().find((item) => item.username === username && item.password === password);
+  const user = (await getAdminUsers()).find((item) => item.username === username && item.password === password);
 
   if (!user) {
     alert("Invalid username or password.");
@@ -735,9 +889,9 @@ function handleAdminLogin(event) {
   setAdminSession(user.username);
   document.getElementById("admin-login-form").reset();
   updateAdminVisibility(true);
-  renderAdminProducts();
-  renderAdminSlideshow();
-  renderAdminUsers();
+  await renderAdminProducts();
+  await renderAdminSlideshow();
+  await renderAdminUsers();
 }
 
 function handleAdminLogout() {
@@ -745,17 +899,17 @@ function handleAdminLogout() {
   updateAdminVisibility(false);
 }
 
-function setupAdminPage() {
+async function setupAdminPage() {
   const loginForm = document.getElementById("admin-login-form");
   const form = document.getElementById("admin-form");
   const userForm = document.getElementById("admin-user-form");
   if (!form || !loginForm || !userForm) return;
 
-  ensureAdminUsers();
-  ensureSlideshowSettings();
+  await ensureAdminUsers();
+  await ensureSlideshowSettings();
 
   const existingSession = getAdminSession();
-  const hasValidSession = Boolean(getAdminUsers().find((user) => user.username === existingSession));
+  const hasValidSession = Boolean((await getAdminUsers()).find((user) => user.username === existingSession));
   if (!hasValidSession) {
     clearAdminSession();
   }
@@ -808,9 +962,9 @@ function setupAdminPage() {
     logoutButton.addEventListener("click", handleAdminLogout);
   }
 
-  renderAdminProducts();
-  renderAdminSlideshow();
-  renderAdminUsers();
+  await renderAdminProducts();
+  await renderAdminSlideshow();
+  await renderAdminUsers();
 }
 
 function handleCheckout() {
@@ -839,7 +993,7 @@ function handleCheckout() {
     submitButton.textContent = "Processing...";
 
     try {
-      const total = calculateCartTotal();
+      const total = await calculateCartTotal();
       const amountInCents = Math.round(total * 100);
 
       const response = await fetch("/create-payment-intent", {
@@ -865,7 +1019,7 @@ function handleCheckout() {
         throw new Error(confirmError.message);
       }
 
-      localStorage.removeItem(cartKey);
+      await clearCart();
       alert("Thank you! Your payment was successful.");
       window.location.href = "index.html";
     } catch (error) {
@@ -876,16 +1030,22 @@ function handleCheckout() {
   });
 }
 
-function initPage() {
-  ensureProductCatalog();
-  ensureSlideshowSettings();
-  renderHeroSlideshow();
-  renderFeaturedProducts();
-  renderProductList();
-  renderProductDetail();
-  renderCart();
-  setupAdminPage();
+async function initPage() {
+  await initSupabase();
+  await ensureProductCatalog();
+  await ensureSlideshowSettings();
+  await renderHeroSlideshow();
+  await renderFeaturedProducts();
+  await renderProductList();
+  await renderProductDetail();
+  await renderCart();
+  await setupAdminPage();
   handleCheckout();
 }
 
-window.addEventListener("DOMContentLoaded", initPage);
+window.addEventListener("DOMContentLoaded", () => {
+  initPage().catch((error) => {
+    console.error(error);
+    alert("There was a problem loading the shop data. Check your Supabase setup and try again.");
+  });
+});
