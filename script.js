@@ -47,6 +47,28 @@ const cartKey = "imeldasBraceletsCart";
 const productKey = "imeldasBraceletsProducts";
 const adminUsersKey = "imeldasBraceletsAdminUsers";
 const adminSessionKey = "imeldasBraceletsAdminSession";
+const slideshowKey = "imeldasBraceletsHeroSlideshow";
+
+const defaultSlideshow = {
+  intervalSeconds: 4,
+  images: [
+    {
+      id: "colourful-handmade-bracelets",
+      src: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=700&q=80",
+      alt: "Colourful handmade bracelets"
+    },
+    {
+      id: "pink-and-gold-jewellery",
+      src: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=700&q=80",
+      alt: "Pink and gold jewellery on a dressing table"
+    },
+    {
+      id: "bright-bead-colours",
+      src: "https://images.unsplash.com/photo-1500305153788-1a1110c9f0b1?auto=format&fit=crop&w=700&q=80",
+      alt: "Bright colourful beads"
+    }
+  ]
+};
 
 function slugify(value) {
   return value
@@ -120,6 +142,42 @@ function setAdminSession(username) {
 
 function clearAdminSession() {
   localStorage.removeItem(adminSessionKey);
+}
+
+function getSlideshowSettings() {
+  const stored = localStorage.getItem(slideshowKey);
+  if (!stored) return { ...defaultSlideshow, images: [...defaultSlideshow.images] };
+
+  try {
+    const parsed = JSON.parse(stored);
+    const images = Array.isArray(parsed.images)
+      ? parsed.images
+          .filter((image) => image && image.src)
+          .map((image, index) => ({
+            id: image.id || `slide-${index + 1}`,
+            src: image.src,
+            alt: image.alt || "Homepage bracelet slideshow image"
+          }))
+      : [];
+    const intervalSeconds = Number(parsed.intervalSeconds);
+
+    return {
+      intervalSeconds: Number.isFinite(intervalSeconds) ? Math.min(Math.max(intervalSeconds, 1), 30) : defaultSlideshow.intervalSeconds,
+      images: images.length > 0 ? images : [...defaultSlideshow.images]
+    };
+  } catch (_error) {
+    return { ...defaultSlideshow, images: [...defaultSlideshow.images] };
+  }
+}
+
+function saveSlideshowSettings(settings) {
+  localStorage.setItem(slideshowKey, JSON.stringify(settings));
+}
+
+function ensureSlideshowSettings() {
+  if (!localStorage.getItem(slideshowKey)) {
+    saveSlideshowSettings(defaultSlideshow);
+  }
 }
 
 function getCart() {
@@ -229,6 +287,35 @@ function renderFeaturedProducts() {
     });
     grid.appendChild(card);
   });
+}
+
+function renderHeroSlideshow() {
+  const slideshow = document.getElementById("hero-slideshow");
+  if (!slideshow) return;
+
+  const settings = getSlideshowSettings();
+  const images = settings.images;
+  slideshow.innerHTML = "";
+
+  images.forEach((image, index) => {
+    const img = document.createElement("img");
+    img.className = `hero-slide${index === 0 ? " is-active" : ""}`;
+    img.src = image.src;
+    img.alt = image.alt;
+    slideshow.appendChild(img);
+  });
+
+  if (images.length <= 1 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  let activeIndex = 0;
+  window.setInterval(() => {
+    const slides = slideshow.querySelectorAll(".hero-slide");
+    if (slides.length <= 1) return;
+
+    slides[activeIndex].classList.remove("is-active");
+    activeIndex = (activeIndex + 1) % slides.length;
+    slides[activeIndex].classList.add("is-active");
+  }, settings.intervalSeconds * 1000);
 }
 
 function renderProductDetail() {
@@ -442,6 +529,123 @@ function renderAdminUsers() {
   });
 }
 
+function renderAdminSlideshow() {
+  const list = document.getElementById("admin-slideshow-list");
+  const intervalInput = document.getElementById("slideshow-interval");
+  if (!list) return;
+
+  const settings = getSlideshowSettings();
+  if (intervalInput) {
+    intervalInput.value = settings.intervalSeconds;
+  }
+
+  list.innerHTML = "";
+
+  settings.images.forEach((image) => {
+    const item = document.createElement("article");
+    item.className = "admin-item";
+    item.innerHTML = `
+      <img src="${image.src}" alt="${image.alt}" />
+      <div class="admin-item-content">
+        <h3>${image.alt}</h3>
+        <p>${image.src}</p>
+      </div>
+      <div class="admin-item-actions">
+        <button class="add-button" data-action="edit-slide" data-id="${image.id}">Edit</button>
+        <button class="remove-button" data-action="delete-slide" data-id="${image.id}">Delete</button>
+      </div>
+    `;
+
+    item.querySelector('[data-action="edit-slide"]').addEventListener("click", () => editSlideshowImage(image.id));
+    item.querySelector('[data-action="delete-slide"]').addEventListener("click", () => deleteSlideshowImage(image.id));
+    list.appendChild(item);
+  });
+}
+
+function saveSlideshowTiming(event) {
+  event.preventDefault();
+
+  const intervalInput = document.getElementById("slideshow-interval");
+  if (!intervalInput) return;
+
+  const intervalSeconds = Number(intervalInput.value);
+  if (!Number.isFinite(intervalSeconds) || intervalSeconds < 1 || intervalSeconds > 30) {
+    alert("Please choose a display time from 1 to 30 seconds.");
+    return;
+  }
+
+  const settings = getSlideshowSettings();
+  saveSlideshowSettings({ ...settings, intervalSeconds });
+  renderAdminSlideshow();
+}
+
+function resetSlideshowImageForm() {
+  const imageForm = document.getElementById("admin-slideshow-image-form");
+  const idInput = document.getElementById("slideshow-image-id");
+  const submitButton = document.getElementById("admin-slideshow-submit");
+  if (imageForm) imageForm.reset();
+  if (idInput) idInput.value = "";
+  if (submitButton) submitButton.textContent = "Add Image";
+}
+
+function upsertSlideshowImage(event) {
+  event.preventDefault();
+
+  const idInput = document.getElementById("slideshow-image-id");
+  const urlInput = document.getElementById("slideshow-image-url");
+  const altInput = document.getElementById("slideshow-image-alt");
+  if (!idInput || !urlInput || !altInput) return;
+
+  const existingId = idInput.value.trim();
+  const src = urlInput.value.trim();
+  const alt = altInput.value.trim();
+  if (!src || !alt) {
+    alert("Please enter an image URL and description.");
+    return;
+  }
+
+  const settings = getSlideshowSettings();
+  const id = existingId || `slide-${Date.now()}`;
+  const nextImage = { id, src, alt };
+  const existingIndex = settings.images.findIndex((image) => image.id === id);
+
+  if (existingIndex >= 0) {
+    settings.images[existingIndex] = nextImage;
+  } else {
+    settings.images.push(nextImage);
+  }
+
+  saveSlideshowSettings(settings);
+  resetSlideshowImageForm();
+  renderAdminSlideshow();
+}
+
+function editSlideshowImage(imageId) {
+  const image = getSlideshowSettings().images.find((item) => item.id === imageId);
+  if (!image) return;
+
+  document.getElementById("slideshow-image-id").value = image.id;
+  document.getElementById("slideshow-image-url").value = image.src;
+  document.getElementById("slideshow-image-alt").value = image.alt;
+  document.getElementById("admin-slideshow-submit").textContent = "Save Image";
+  document.getElementById("admin-slideshow-image-form").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function deleteSlideshowImage(imageId) {
+  const settings = getSlideshowSettings();
+  if (settings.images.length <= 1) {
+    alert("Keep at least one slideshow image.");
+    return;
+  }
+
+  saveSlideshowSettings({
+    ...settings,
+    images: settings.images.filter((image) => image.id !== imageId)
+  });
+  resetSlideshowImageForm();
+  renderAdminSlideshow();
+}
+
 function deleteAdminUser(username) {
   const users = getAdminUsers();
   if (users.length <= 1) {
@@ -532,6 +736,7 @@ function handleAdminLogin(event) {
   document.getElementById("admin-login-form").reset();
   updateAdminVisibility(true);
   renderAdminProducts();
+  renderAdminSlideshow();
   renderAdminUsers();
 }
 
@@ -547,6 +752,7 @@ function setupAdminPage() {
   if (!form || !loginForm || !userForm) return;
 
   ensureAdminUsers();
+  ensureSlideshowSettings();
 
   const existingSession = getAdminSession();
   const hasValidSession = Boolean(getAdminUsers().find((user) => user.username === existingSession));
@@ -559,6 +765,23 @@ function setupAdminPage() {
   loginForm.addEventListener("submit", handleAdminLogin);
 
   form.addEventListener("submit", upsertProduct);
+
+  const slideshowSettingsForm = document.getElementById("admin-slideshow-settings-form");
+  if (slideshowSettingsForm) {
+    slideshowSettingsForm.addEventListener("submit", saveSlideshowTiming);
+  }
+
+  const slideshowImageForm = document.getElementById("admin-slideshow-image-form");
+  if (slideshowImageForm) {
+    slideshowImageForm.addEventListener("submit", upsertSlideshowImage);
+  }
+
+  const slideshowResetButton = document.getElementById("admin-slideshow-reset");
+  if (slideshowResetButton) {
+    slideshowResetButton.addEventListener("click", () => {
+      window.setTimeout(resetSlideshowImageForm, 0);
+    });
+  }
 
   const resetButton = document.getElementById("admin-reset");
   const idInput = document.getElementById("product-id");
@@ -586,6 +809,7 @@ function setupAdminPage() {
   }
 
   renderAdminProducts();
+  renderAdminSlideshow();
   renderAdminUsers();
 }
 
@@ -654,6 +878,8 @@ function handleCheckout() {
 
 function initPage() {
   ensureProductCatalog();
+  ensureSlideshowSettings();
+  renderHeroSlideshow();
   renderFeaturedProducts();
   renderProductList();
   renderProductDetail();

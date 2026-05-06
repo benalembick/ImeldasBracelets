@@ -71,6 +71,39 @@
 
       <section class="admin-users-section">
         <div class="section-heading">
+          <p class="eyebrow">Homepage slideshow</p>
+          <h2>Manage Hero Images</h2>
+        </div>
+        <div class="admin-grid">
+          <div class="admin-stack">
+            <form id="admin-slideshow-settings-form" class="checkout-form admin-form">
+              <label for="slideshow-interval">Image display time (seconds)</label>
+              <input id="slideshow-interval" name="intervalSeconds" type="number" min="1" max="30" step="1" required />
+              <button class="button button-primary" type="submit">Save Timing</button>
+            </form>
+
+            <form id="admin-slideshow-image-form" class="checkout-form admin-form">
+              <input id="slideshow-image-id" name="slideId" type="hidden" />
+
+              <label for="slideshow-image-url">Image URL</label>
+              <input id="slideshow-image-url" name="imageUrl" type="url" required />
+
+              <label for="slideshow-image-alt">Image description</label>
+              <input id="slideshow-image-alt" name="imageAlt" type="text" required />
+
+              <div class="admin-form-actions">
+                <button class="button button-primary" id="admin-slideshow-submit" type="submit">Add Image</button>
+                <button class="button" id="admin-slideshow-reset" type="reset">Clear</button>
+              </div>
+            </form>
+          </div>
+
+          <div id="admin-slideshow-list" class="admin-list"></div>
+        </div>
+      </section>
+
+      <section class="admin-users-section">
+        <div class="section-heading">
           <p class="eyebrow">Admin users</p>
           <h2>Manage Admin Users</h2>
         </div>
