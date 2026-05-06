@@ -40,6 +40,76 @@ const defaultProducts = [
     price: 20.0,
     image: "https://images.unsplash.com/photo-1458956486364-9e5f8d25f228?auto=format&fit=crop&w=700&q=80",
     description: "Cool blue beads with tiny shell accents for seaside adventure style."
+  },
+  {
+    id: "strawberry-pop",
+    name: "Strawberry Pop",
+    price: 16.75,
+    image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=700&q=80",
+    description: "Juicy red and soft pink beads with a playful fruit charm for bright days."
+  },
+  {
+    id: "mermaid-wishes",
+    name: "Mermaid Wishes",
+    price: 21.5,
+    image: "https://images.unsplash.com/photo-1535632787350-4e68ef0ac584?auto=format&fit=crop&w=700&q=80",
+    description: "Shimmery teal, lilac, and pearl beads inspired by treasure-box sparkle."
+  },
+  {
+    id: "confetti-party",
+    name: "Confetti Party",
+    price: 18.0,
+    image: "https://images.unsplash.com/photo-1531995811006-35cb42e1a022?auto=format&fit=crop&w=700&q=80",
+    description: "A mix of bright beads that feels ready for birthdays, sleepovers, and celebrations."
+  },
+  {
+    id: "bestie-beam",
+    name: "Bestie Beam",
+    price: 14.5,
+    image: "https://images.unsplash.com/photo-1512163143273-bde0e3cc7407?auto=format&fit=crop&w=700&q=80",
+    description: "A sweet friendship bracelet with happy colour blocks and a tiny heart accent."
+  },
+  {
+    id: "garden-spark",
+    name: "Garden Spark",
+    price: 19.75,
+    image: "https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?auto=format&fit=crop&w=700&q=80",
+    description: "Green, pink, and gold beads with floral details for a fresh garden-party look."
+  },
+  {
+    id: "cloud-candy",
+    name: "Cloud Candy",
+    price: 17.0,
+    image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=700&q=80",
+    description: "Soft blue, white, and pastel rainbow beads for a dreamy everyday bracelet."
+  },
+  {
+    id: "starry-night-stack",
+    name: "Starry Night Stack",
+    price: 22.0,
+    image: "https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?auto=format&fit=crop&w=700&q=80",
+    description: "Navy, silver, and crystal beads made to layer with favourite bracelets."
+  },
+  {
+    id: "lemonade-smile",
+    name: "Lemonade Smile",
+    price: 15.75,
+    image: "https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=700&q=80",
+    description: "Yellow and white beads with a zesty charm that brings sunny picnic energy."
+  },
+  {
+    id: "bubblegum-dream",
+    name: "Bubblegum Dream",
+    price: 16.25,
+    image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=700&q=80",
+    description: "Pink glassy beads and sparkle details for a bracelet that feels extra fun."
+  },
+  {
+    id: "crystal-rainbow",
+    name: "Crystal Rainbow",
+    price: 23.0,
+    image: "https://images.unsplash.com/photo-1500305153788-1a1110c9f0b1?auto=format&fit=crop&w=700&q=80",
+    description: "Clear crystal beads with rainbow pops for a dressier gift-ready favourite."
   }
 ];
 
@@ -200,9 +270,17 @@ async function ensureProductCatalog() {
   const db = await getDb();
   if (!db) return;
 
-  const { count, error } = await db.from("products").select("id", { count: "exact", head: true });
-  if (!error && count === 0) {
-    await saveProducts(defaultProducts);
+  const { data, error } = await db.from("products").select("id");
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  const existingIds = new Set((data || []).map((product) => product.id));
+  const missingDefaults = defaultProducts.filter((product) => !existingIds.has(product.id));
+
+  if (missingDefaults.length > 0) {
+    await saveProducts(missingDefaults);
   }
 }
 
@@ -355,6 +433,7 @@ async function addToCart(productId) {
   }
 
   await saveCart(cart);
+  await updateHeaderState();
   alert(`${product.name} added to cart!`);
 }
 
@@ -362,6 +441,7 @@ async function removeFromCart(productId) {
   const cart = (await getCart()).filter((item) => item.id !== productId);
   await saveCart(cart);
   await renderCart();
+  await updateHeaderState();
 }
 
 async function calculateCartTotal() {
@@ -371,6 +451,26 @@ async function calculateCartTotal() {
     const product = products.find((item) => item.id === cartItem.id);
     return total + (product ? product.price * cartItem.quantity : 0);
   }, 0);
+}
+
+async function updateHeaderState() {
+  const currentPage = window.location.pathname.split("/").pop() || "index.html";
+
+  document.querySelectorAll(".nav-links a[href]").forEach((link) => {
+    const linkPage = link.getAttribute("href");
+    const isProductDetail = currentPage === "product.html" && linkPage === "products.html";
+    if (linkPage === currentPage || isProductDetail) {
+      link.setAttribute("aria-current", "page");
+    } else {
+      link.removeAttribute("aria-current");
+    }
+  });
+
+  const cartCount = document.querySelector(".cart-count");
+  if (!cartCount) return;
+
+  const itemCount = (await getCart()).reduce((total, item) => total + item.quantity, 0);
+  cartCount.textContent = String(itemCount);
 }
 
 function formatPrice(value) {
@@ -451,6 +551,7 @@ async function renderHeroSlideshow() {
   const settings = await getSlideshowSettings();
   const images = settings.images;
   slideshow.innerHTML = "";
+  const slideEls = [];
 
   images.forEach((image, index) => {
     const img = document.createElement("img");
@@ -458,19 +559,60 @@ async function renderHeroSlideshow() {
     img.src = image.src;
     img.alt = image.alt;
     slideshow.appendChild(img);
+    slideEls.push(img);
   });
 
-  if (images.length <= 1 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (images.length <= 1) return;
+
+  const dots = document.createElement("div");
+  dots.className = "hero-slideshow-dots";
+  dots.setAttribute("aria-label", "Choose slideshow image");
+  slideshow.appendChild(dots);
+
+  const dotEls = images.map((image, index) => {
+    const button = document.createElement("button");
+    button.className = `hero-slideshow-dot${index === 0 ? " is-active" : ""}`;
+    button.type = "button";
+    button.setAttribute("aria-label", `Show image ${index + 1}: ${image.alt}`);
+    button.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+    dots.appendChild(button);
+    return button;
+  });
 
   let activeIndex = 0;
-  window.setInterval(() => {
-    const slides = slideshow.querySelectorAll(".hero-slide");
-    if (slides.length <= 1) return;
+  let timerId;
 
-    slides[activeIndex].classList.remove("is-active");
-    activeIndex = (activeIndex + 1) % slides.length;
-    slides[activeIndex].classList.add("is-active");
-  }, settings.intervalSeconds * 1000);
+  function showSlide(nextIndex) {
+    slideEls[activeIndex].classList.remove("is-active");
+    dotEls[activeIndex].classList.remove("is-active");
+    dotEls[activeIndex].setAttribute("aria-pressed", "false");
+    activeIndex = nextIndex;
+    slideEls[activeIndex].classList.add("is-active");
+    dotEls[activeIndex].classList.add("is-active");
+    dotEls[activeIndex].setAttribute("aria-pressed", "true");
+  }
+
+  function showNextSlide() {
+    showSlide((activeIndex + 1) % slideEls.length);
+  }
+
+  function startTimer() {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    timerId = window.setInterval(showNextSlide, settings.intervalSeconds * 1000);
+  }
+
+  dotEls.forEach((dot, index) => {
+    dot.addEventListener("click", () => {
+      if (index === activeIndex) return;
+      showSlide(index);
+      if (timerId) {
+        window.clearInterval(timerId);
+        startTimer();
+      }
+    });
+  });
+
+  startTimer();
 }
 
 async function renderProductDetail() {
@@ -1039,6 +1181,7 @@ async function initPage() {
   await renderProductList();
   await renderProductDetail();
   await renderCart();
+  await updateHeaderState();
   await setupAdminPage();
   handleCheckout();
 }

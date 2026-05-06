@@ -10,12 +10,18 @@
 <body>
   <header class="site-header">
     <div class="container header-inner">
-      <a class="logo" href="index.html">Imelda’s Bracelets</a>
+      <a class="brand" href="index.html" aria-label="Imelda's Bracelets home">
+        <span class="brand-mark" aria-hidden="true">IB</span>
+        <span class="brand-copy">
+          <span class="brand-name">Imelda's Bracelets</span>
+          <span class="brand-tagline">Handmade bracelet studio</span>
+        </span>
+      </a>
       <nav class="nav-links" aria-label="Main navigation">
         <a href="index.html">Home</a>
         <a href="products.html">Shop</a>
-        <a href="cart.html">Cart</a>
-        <a href="admin.html">Admin</a>
+        <a class="nav-cart" href="cart.html">Cart <span class="cart-count" aria-label="Items in cart">0</span></a>
+        <a class="nav-admin" href="admin.html">Admin</a>
       </nav>
     </div>
   </header>
