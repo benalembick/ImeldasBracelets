@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin | Imelda's Bracelets</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="index.html">Imelda's Bracelets</a>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="index.html">Home</a>
+        <a href="products.html">Shop</a>
+        <a href="cart.html">Cart</a>
+        <a href="admin.html">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container page-content">
+    <section id="admin-login-section">
+      <section class="page-heading">
+        <p class="eyebrow">Admin</p>
+        <h1>Admin login</h1>
+        <p class="section-copy">Sign in to manage bracelets and admin users.</p>
+      </section>
+      <form id="admin-login-form" class="checkout-form admin-login-form">
+        <label for="admin-login-username">Username</label>
+        <input id="admin-login-username" name="username" type="text" autocomplete="username" required />
+        <label for="admin-login-password">Password</label>
+        <input id="admin-login-password" name="password" type="password" autocomplete="current-password" required />
+        <button class="button button-primary" type="submit">Log In</button>
+        <p class="section-copy">Default login: <strong>admin</strong> / <strong>admin123</strong>. Change this in Manage Admin Users after login.</p>
+      </form>
+    </section>
+
+    <section id="admin-dashboard" hidden>
+      <section class="page-heading">
+        <p class="eyebrow">Admin</p>
+        <h1>Manage bracelets and access</h1>
+        <p class="section-copy">Signed in as <strong id="admin-current-user"></strong>.</p>
+        <button class="button" id="admin-logout" type="button">Log Out</button>
+      </section>
+
+      <section class="admin-grid">
+        <form id="admin-form" class="checkout-form admin-form">
+          <input id="product-id" name="productId" type="hidden" />
+
+          <label for="product-name">Bracelet name</label>
+          <input id="product-name" name="name" type="text" required />
+
+          <label for="product-price">Price (USD)</label>
+          <input id="product-price" name="price" type="number" min="0.01" step="0.01" required />
+
+          <label for="product-image">Image URL</label>
+          <input id="product-image" name="image" type="url" required />
+
+          <label for="product-description">Description</label>
+          <textarea id="product-description" name="description" rows="4" required></textarea>
+
+          <div class="admin-form-actions">
+            <button class="button button-primary" id="admin-submit" type="submit">Add Bracelet</button>
+            <button class="button" id="admin-reset" type="reset">Clear</button>
+          </div>
+        </form>
+
+        <div id="admin-product-list" class="admin-list"></div>
+      </section>
+
+      <section class="admin-users-section">
+        <div class="section-heading">
+          <p class="eyebrow">Admin users</p>
+          <h2>Manage Admin Users</h2>
+        </div>
+        <div class="admin-grid">
+          <form id="admin-user-form" class="checkout-form admin-form">
+            <input id="admin-user-original" name="originalUsername" type="hidden" />
+
+            <label for="admin-user-username">Username</label>
+            <input id="admin-user-username" name="username" type="text" required />
+
+            <label for="admin-user-password">Password</label>
+            <input id="admin-user-password" name="password" type="password" required />
+
+            <div class="admin-form-actions">
+              <button class="button button-primary" id="admin-user-submit" type="submit">Add User</button>
+              <button class="button" id="admin-user-reset" type="reset">Clear</button>
+            </div>
+          </form>
+          <div id="admin-user-list" class="admin-list"></div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>Imelda's Bracelets - Admin tools.</p>
+      <nav class="footer-nav">
+        <a href="index.html">Home</a>
+        <a href="products.html">Shop</a>
+        <a href="cart.html">Cart</a>
+        <a href="admin.html">Admin</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

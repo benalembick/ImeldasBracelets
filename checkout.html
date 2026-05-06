@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout | Imelda’s Bracelets</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="index.html">Imelda’s Bracelets</a>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="index.html">Home</a>
+        <a href="products.html">Shop</a>
+        <a href="cart.html">Cart</a>
+        <a href="admin.html">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container page-content">
+    <section class="page-heading">
+      <p class="eyebrow">Checkout</p>
+      <h1>Complete your order</h1>
+      <p class="section-copy">Fill in your details and complete payment for Imelda's bracelets.</p>
+    </section>
+
+    <section class="checkout-form">
+      <form id="checkout-form">
+        <label for="name">Name</label>
+        <input id="name" name="name" type="text" placeholder="Your name" required />
+
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" placeholder="you@example.com" required />
+
+        <label for="address">Address</label>
+        <textarea id="address" name="address" rows="4" placeholder="Street address, city, postcode" required></textarea>
+
+        <div id="card-element"><!-- Stripe Elements will be inserted here --></div>
+        <div id="card-errors" role="alert"></div>
+
+        <button class="button button-primary" type="submit" id="submit-button">Complete Payment</button>
+      </form>
+      <div class="checkout-note">
+        <p>Test payment mode: Use card number 4242 4242 4242 4242 with any future expiry and CVC.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>Imelda’s Bracelets — Bright and fun, all the way.</p>
+      <nav class="footer-nav">
+        <a href="index.html">Home</a>
+        <a href="products.html">Shop</a>
+        <a href="cart.html">Cart</a>
+        <a href="admin.html">Admin</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

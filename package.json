@@ -1,0 +1,13 @@
+{
+  "name": "imeldas-bracelets",
+  "version": "1.0.0",
+  "description": "Simple e-commerce demo with Stripe payments",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "stripe": "^13.0.0"
+  }
+}
