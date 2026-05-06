@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Shop | Imelda’s Bracelets</title>
+  <title>All Bracelets | Imelda's Bracelets</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div class="announcement-bar">Free shipping over $45 + 20% off sunny stacks today</div>
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="index.html" aria-label="Imelda's Bracelets home">
@@ -17,37 +18,134 @@
         </span>
       </a>
       <nav class="nav-links" aria-label="Main navigation">
-        <a href="index.html">Home</a>
         <a href="products.html">Shop</a>
-        <a class="nav-cart" href="cart.html">Cart <span class="cart-count" aria-label="Items in cart">0</span></a>
-        <a class="nav-admin" href="admin.html">Admin</a>
+        <a href="products.html?category=bracelets">Bracelets</a>
+        <a href="products.html?sort=best">Best Sellers</a>
+        <a href="products.html?sort=newest">New</a>
+        <a href="products.html?style=custom">Custom</a>
+        <a href="products.html?price=sale">Sale</a>
+      </nav>
+      <nav class="header-icons" aria-label="Shop tools">
+        <a href="products.html" aria-label="Search"><span aria-hidden="true">&#128269;</span></a>
+        <a href="admin.html" aria-label="Account"><span aria-hidden="true">&#9786;</span></a>
+        <a class="nav-cart" href="cart.html" aria-label="Cart"><span aria-hidden="true">&#128722;</span><span class="cart-count" aria-label="Items in cart">0</span></a>
       </nav>
     </div>
   </header>
 
-  <main class="container page-content">
-    <section class="page-heading">
-      <p class="eyebrow">Shop</p>
-      <h1>Bracelets for every bright mood</h1>
-      <p class="section-copy">Choose from fun, colourful bracelets that are perfect for gifting, celebrating, or wearing every day.</p>
+  <main>
+    <section class="collection-hero">
+      <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=82" alt="Beach waves for a bright bracelet collection" />
+      <div class="container collection-hero-copy">
+        <p class="eyebrow">Beachy, bright, stack-ready</p>
+        <h1>Shop All Bracelets</h1>
+        <p>Colourful handmade pieces for gifting, stacking, and adding a little sunshine to every day.</p>
+      </div>
     </section>
 
-    <section class="product-grid" id="product-list">
-      <!-- Product cards inserted by script -->
+    <section class="container collection-shell">
+      <div class="filter-sort-bar" aria-label="Filter and sort bracelets">
+        <button class="filter-pill is-active" type="button" data-filter-group="color" data-filter-value="all">All colors</button>
+        <button class="filter-pill" type="button" data-filter-group="color" data-filter-value="pink">Pink</button>
+        <button class="filter-pill" type="button" data-filter-group="color" data-filter-value="blue">Blue</button>
+        <button class="filter-pill" type="button" data-filter-group="style" data-filter-value="beaded">Beaded</button>
+        <button class="filter-pill" type="button" data-filter-group="style" data-filter-value="charm">Charm</button>
+        <button class="filter-pill" type="button" data-filter-group="style" data-filter-value="custom">Custom</button>
+        <select id="collection-price-filter" aria-label="Filter by price">
+          <option value="all">All prices</option>
+          <option value="under-17">Under $17</option>
+          <option value="17-20">$17 to $20</option>
+          <option value="over-20">Over $20</option>
+          <option value="sale">Sale picks</option>
+        </select>
+        <select id="collection-sort" aria-label="Sort products">
+          <option value="best">Best selling</option>
+          <option value="newest">Newest</option>
+          <option value="price-low">Price, low to high</option>
+          <option value="price-high">Price, high to low</option>
+        </select>
+      </div>
+
+      <div class="collection-meta">
+        <p id="collection-count">Loading bracelets...</p>
+        <a href="#bundle-deals">Bundle & save</a>
+      </div>
+
+      <section class="product-grid collection-grid" id="product-list">
+        <!-- Product cards inserted by script -->
+      </section>
+
+      <section class="discovery-section">
+        <div>
+          <p class="eyebrow">Trending now</p>
+          <h2>Best sellers for sunny stacks</h2>
+        </div>
+        <div class="mini-product-grid" id="trending-grid"></div>
+      </section>
+
+      <section class="promo-row" id="bundle-deals">
+        <article class="promo-banner promo-custom">
+          <p class="eyebrow">Make it yours</p>
+          <h2>Build Your Own Bracelet</h2>
+          <p>Pick colours, charms, and letter beads for a one-of-a-kind gift.</p>
+          <a class="button button-primary" href="products.html?style=custom">Start Customising</a>
+        </article>
+        <article class="promo-banner promo-sale">
+          <p class="eyebrow">Stack more</p>
+          <h2>Bundle & Save</h2>
+          <p>Buy any 3 bracelets and save 15% at checkout.</p>
+          <a class="button button-secondary" href="products.html?sort=best">Shop Bundles</a>
+        </article>
+      </section>
+
+      <section class="newsletter-strip" aria-label="Email signup">
+        <div>
+          <p class="eyebrow">First-order treat</p>
+          <h2>Get 10% off your first bracelet stack</h2>
+        </div>
+        <form class="newsletter-form">
+          <label class="sr-only" for="newsletter-email">Email address</label>
+          <input id="newsletter-email" type="email" placeholder="Email address" />
+          <button class="button button-primary" type="submit">Get 10% Off</button>
+        </form>
+      </section>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div class="container footer-inner">
-      <p>Imelda’s Bracelets — Bright, handmade designs.</p>
+    <div class="container footer-inner footer-columns">
+      <div>
+        <h3>Imelda's Bracelets</h3>
+        <p>Bright handmade bracelets for beach days, besties, and tiny celebrations.</p>
+      </div>
       <nav class="footer-nav">
-        <a href="index.html">Home</a>
+        <strong>Shop</strong>
         <a href="products.html">Shop</a>
+        <a href="products.html?sort=best">Best Sellers</a>
+        <a href="products.html?style=custom">Custom</a>
+      </nav>
+      <nav class="footer-nav">
+        <strong>Help</strong>
         <a href="cart.html">Cart</a>
+        <a href="checkout.html">Checkout</a>
         <a href="admin.html">Admin</a>
+      </nav>
+      <nav class="footer-nav">
+        <strong>Social</strong>
+        <a href="products.html">Instagram</a>
+        <a href="products.html">TikTok</a>
+        <a href="products.html">Pinterest</a>
       </nav>
     </div>
   </footer>
+
+  <div class="quick-view" id="quick-view" aria-hidden="true">
+    <div class="quick-view-backdrop" data-close-quick-view></div>
+    <section class="quick-view-dialog" role="dialog" aria-modal="true" aria-labelledby="quick-view-title">
+      <button class="quick-view-close" type="button" data-close-quick-view aria-label="Close quick view">x</button>
+      <div id="quick-view-content"></div>
+    </section>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js"></script>

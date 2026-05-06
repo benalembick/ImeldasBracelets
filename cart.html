@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cart | Imelda’s Bracelets</title>
+  <title>Cart | Imelda's Bracelets</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div class="announcement-bar">Free shipping over $45 + 20% off sunny stacks today</div>
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="index.html" aria-label="Imelda's Bracelets home">
@@ -17,10 +18,17 @@
         </span>
       </a>
       <nav class="nav-links" aria-label="Main navigation">
-        <a href="index.html">Home</a>
         <a href="products.html">Shop</a>
-        <a class="nav-cart" href="cart.html">Cart <span class="cart-count" aria-label="Items in cart">0</span></a>
-        <a class="nav-admin" href="admin.html">Admin</a>
+        <a href="products.html?category=bracelets">Bracelets</a>
+        <a href="products.html?sort=best">Best Sellers</a>
+        <a href="products.html?sort=newest">New</a>
+        <a href="products.html?style=custom">Custom</a>
+        <a href="products.html?price=sale">Sale</a>
+      </nav>
+      <nav class="header-icons" aria-label="Shop tools">
+        <a href="products.html" aria-label="Search"><span aria-hidden="true">&#128269;</span></a>
+        <a href="admin.html" aria-label="Account"><span aria-hidden="true">&#9786;</span></a>
+        <a class="nav-cart" href="cart.html" aria-label="Cart"><span aria-hidden="true">&#128722;</span><span class="cart-count" aria-label="Items in cart">0</span></a>
       </nav>
     </div>
   </header>
@@ -29,7 +37,7 @@
     <section class="page-heading">
       <p class="eyebrow">Your cart</p>
       <h1>Ready to checkout?</h1>
-      <p class="section-copy">Review your bracelet selection and continue to a simple checkout form.</p>
+      <p class="section-copy">Review your bracelet stack and head to a simple checkout.</p>
     </section>
 
     <section class="cart-section">
@@ -37,19 +45,35 @@
       <div class="cart-summary">
         <h2>Summary</h2>
         <p id="cart-total">Total: $0.00</p>
-        <a class="button button-primary" href="checkout.html">Proceed to checkout</a>
+        <p class="section-copy">Buy any 3 bracelets and save 15%.</p>
+        <a class="button button-primary" href="checkout.html">Proceed to Checkout</a>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div class="container footer-inner">
-      <p>Imelda’s Bracelets — Friendly, fun shopping.</p>
+    <div class="container footer-inner footer-columns">
+      <div>
+        <h3>Imelda's Bracelets</h3>
+        <p>Friendly, fun shopping for bright handmade bracelets.</p>
+      </div>
       <nav class="footer-nav">
-        <a href="index.html">Home</a>
+        <strong>Shop</strong>
         <a href="products.html">Shop</a>
+        <a href="products.html?sort=best">Best Sellers</a>
+        <a href="products.html?style=custom">Custom</a>
+      </nav>
+      <nav class="footer-nav">
+        <strong>Help</strong>
         <a href="cart.html">Cart</a>
+        <a href="checkout.html">Checkout</a>
         <a href="admin.html">Admin</a>
+      </nav>
+      <nav class="footer-nav">
+        <strong>Social</strong>
+        <a href="products.html">Instagram</a>
+        <a href="products.html">TikTok</a>
+        <a href="products.html">Pinterest</a>
       </nav>
     </div>
   </footer>
