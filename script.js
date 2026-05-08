@@ -4,112 +4,240 @@ const defaultProducts = [
     name: "Flower Fun Bracelet",
     price: 16.0,
     image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=700&q=80",
-    description: "Bright flower beads with a sparkling charm. Perfect for sharing with friends."
+    description: "Bright flower beads with a sparkling charm. Perfect for sharing with friends.",
+    color: "pink",
+    type: "bracelet",
+    beaded: true,
+    charm: true,
+    category: "bracelets",
+    badge: "Best Seller",
+    rating: 4.9,
+    sortRank: 1
   },
   {
     id: "sunshine-twist",
     name: "Sunshine Twist",
     price: 18.5,
     image: "https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=700&q=80",
-    description: "Yellow, orange, and gold beads for a happy summer style."
+    description: "Yellow, orange, and gold beads for a happy summer style.",
+    color: "yellow",
+    type: "bracelet",
+    beaded: true,
+    charm: false,
+    category: "bracelets",
+    badge: "Waterproof",
+    rating: 4.8,
+    sortRank: 4
   },
   {
     id: "rainbow-smile",
     name: "Rainbow Smile",
     price: 19.0,
     image: "https://images.unsplash.com/photo-1500305153788-1a1110c9f0b1?auto=format&fit=crop&w=700&q=80",
-    description: "A cheerful stack of colourful beads that shows off your brightest mood."
+    description: "A cheerful stack of colourful beads that shows off your brightest mood.",
+    color: "multi",
+    type: "bracelet",
+    beaded: true,
+    charm: false,
+    category: "bracelets",
+    badge: "Trending",
+    rating: 5,
+    sortRank: 2
   },
   {
     id: "moonlight-gem",
     name: "Moonlight Gem",
     price: 17.25,
     image: "https://images.unsplash.com/photo-1504208434309-cb69f4fe52b0?auto=format&fit=crop&w=700&q=80",
-    description: "Soft sparkly pastels and a little moon charm for gentle nighttime magic."
+    description: "Soft sparkly pastels and a little moon charm for gentle nighttime magic.",
+    color: "purple",
+    type: "bracelet",
+    beaded: true,
+    charm: true,
+    category: "bracelets",
+    badge: "New",
+    rating: 4.7,
+    sortRank: 9
   },
   {
     id: "berry-sprinkle",
     name: "Berry Sprinkle",
     price: 15.5,
     image: "https://images.unsplash.com/photo-1473448916294-50a111265d0e?auto=format&fit=crop&w=700&q=80",
-    description: "Pink, purple, and glitter beads for a sweet bracelet that feels like candy."
+    description: "Pink, purple, and glitter beads for a sweet bracelet that feels like candy.",
+    color: "pink",
+    type: "bracelet",
+    beaded: true,
+    charm: false,
+    category: "sale",
+    badge: "Save 20%",
+    rating: 4.8,
+    sortRank: 5
   },
   {
     id: "ocean-breeze",
     name: "Ocean Breeze",
     price: 20.0,
     image: "https://images.unsplash.com/photo-1458956486364-9e5f8d25f228?auto=format&fit=crop&w=700&q=80",
-    description: "Cool blue beads with tiny shell accents for seaside adventure style."
+    description: "Cool blue beads with tiny shell accents for seaside adventure style.",
+    color: "blue",
+    type: "bracelet",
+    beaded: true,
+    charm: true,
+    category: "bracelets",
+    badge: "Beach Pick",
+    rating: 4.9,
+    sortRank: 3
   },
   {
     id: "strawberry-pop",
     name: "Strawberry Pop",
     price: 16.75,
     image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=700&q=80",
-    description: "Juicy red and soft pink beads with a playful fruit charm for bright days."
+    description: "Juicy red and soft pink beads with a playful fruit charm for bright days.",
+    color: "pink",
+    type: "bracelet",
+    beaded: true,
+    charm: true,
+    category: "bracelets",
+    badge: "New",
+    rating: 4.8,
+    sortRank: 7
   },
   {
     id: "mermaid-wishes",
     name: "Mermaid Wishes",
     price: 21.5,
     image: "https://images.unsplash.com/photo-1535632787350-4e68ef0ac584?auto=format&fit=crop&w=700&q=80",
-    description: "Shimmery teal, lilac, and pearl beads inspired by treasure-box sparkle."
+    description: "Shimmery teal, lilac, and pearl beads inspired by treasure-box sparkle.",
+    color: "blue",
+    type: "bracelet",
+    beaded: true,
+    charm: false,
+    category: "bracelets",
+    badge: "Trending",
+    rating: 4.9,
+    sortRank: 6
   },
   {
     id: "confetti-party",
     name: "Confetti Party",
     price: 18.0,
     image: "https://images.unsplash.com/photo-1531995811006-35cb42e1a022?auto=format&fit=crop&w=700&q=80",
-    description: "A mix of bright beads that feels ready for birthdays, sleepovers, and celebrations."
+    description: "A mix of bright beads that feels ready for birthdays, sleepovers, and celebrations.",
+    color: "multi",
+    type: "bracelet",
+    beaded: true,
+    charm: false,
+    category: "bracelets",
+    badge: "Best Seller",
+    rating: 4.9,
+    sortRank: 8
   },
   {
     id: "bestie-beam",
     name: "Bestie Beam",
     price: 14.5,
     image: "https://images.unsplash.com/photo-1512163143273-bde0e3cc7407?auto=format&fit=crop&w=700&q=80",
-    description: "A sweet friendship bracelet with happy colour blocks and a tiny heart accent."
+    description: "A sweet friendship bracelet with happy colour blocks and a tiny heart accent.",
+    color: "pink",
+    type: "custom",
+    beaded: true,
+    charm: true,
+    category: "bracelets",
+    badge: "Gift Pick",
+    rating: 4.7,
+    sortRank: 10
   },
   {
     id: "garden-spark",
     name: "Garden Spark",
     price: 19.75,
     image: "https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?auto=format&fit=crop&w=700&q=80",
-    description: "Green, pink, and gold beads with floral details for a fresh garden-party look."
+    description: "Green, pink, and gold beads with floral details for a fresh garden-party look.",
+    color: "green",
+    type: "bracelet",
+    beaded: true,
+    charm: true,
+    category: "bracelets",
+    badge: "New",
+    rating: 4.8,
+    sortRank: 11
   },
   {
     id: "cloud-candy",
     name: "Cloud Candy",
     price: 17.0,
     image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=700&q=80",
-    description: "Soft blue, white, and pastel rainbow beads for a dreamy everyday bracelet."
+    description: "Soft blue, white, and pastel rainbow beads for a dreamy everyday bracelet.",
+    color: "blue",
+    type: "custom",
+    beaded: true,
+    charm: false,
+    category: "bracelets",
+    badge: "Customizable",
+    rating: 4.9,
+    sortRank: 12
   },
   {
     id: "starry-night-stack",
     name: "Starry Night Stack",
     price: 22.0,
     image: "https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?auto=format&fit=crop&w=700&q=80",
-    description: "Navy, silver, and crystal beads made to layer with favourite bracelets."
+    description: "Navy, silver, and crystal beads made to layer with favourite bracelets.",
+    color: "blue",
+    type: "bracelet",
+    beaded: true,
+    charm: false,
+    category: "bracelets",
+    badge: "Bundle",
+    rating: 4.8,
+    sortRank: 13
   },
   {
     id: "lemonade-smile",
     name: "Lemonade Smile",
     price: 15.75,
     image: "https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=700&q=80",
-    description: "Yellow and white beads with a zesty charm that brings sunny picnic energy."
+    description: "Yellow and white beads with a zesty charm that brings sunny picnic energy.",
+    color: "yellow",
+    type: "bracelet",
+    beaded: true,
+    charm: true,
+    category: "sale",
+    badge: "Save 20%",
+    rating: 4.7,
+    sortRank: 14
   },
   {
     id: "bubblegum-dream",
     name: "Bubblegum Dream",
     price: 16.25,
     image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=700&q=80",
-    description: "Pink glassy beads and sparkle details for a bracelet that feels extra fun."
+    description: "Pink glassy beads and sparkle details for a bracelet that feels extra fun.",
+    color: "pink",
+    type: "bracelet",
+    beaded: true,
+    charm: false,
+    category: "bracelets",
+    badge: "Trending",
+    rating: 4.9,
+    sortRank: 15
   },
   {
     id: "crystal-rainbow",
     name: "Crystal Rainbow",
     price: 23.0,
     image: "https://images.unsplash.com/photo-1500305153788-1a1110c9f0b1?auto=format&fit=crop&w=700&q=80",
-    description: "Clear crystal beads with rainbow pops for a dressier gift-ready favourite."
+    description: "Clear crystal beads with rainbow pops for a dressier gift-ready favourite.",
+    color: "multi",
+    type: "bracelet",
+    beaded: true,
+    charm: true,
+    category: "bracelets",
+    badge: "Best Seller",
+    rating: 5,
+    sortRank: 16
   }
 ];
 
@@ -120,6 +248,8 @@ const slideshowSettingKey = "hero_slideshow";
 let supabaseClient = null;
 let supabaseReady = false;
 let warnedAboutSupabase = false;
+let productMetadataColumnsAvailable = true;
+let productHoverImageColumnAvailable = true;
 
 const defaultSlideshow = {
   intervalSeconds: 4,
@@ -214,13 +344,62 @@ async function getDb() {
 function normalizeProducts(products) {
   return products
     .filter((product) => product && product.id && product.name && Number.isFinite(Number(product.price)))
-    .map((product) => ({
-      id: product.id,
-      name: product.name,
-      price: Number(product.price),
-      image: product.image,
-      description: product.description
-    }));
+    .map((product, index) => {
+      const fallback = productMerchandising[product.id] || {};
+      const rating = Number(product.rating ?? fallback.rating);
+      const sortRank = Number(product.sort_rank ?? product.sortRank ?? fallback.sortRank);
+
+      return {
+        id: product.id,
+        name: product.name,
+        price: Number(product.price),
+        image: product.image,
+        hoverImage: product.hover_image || product.hoverImage || "",
+        description: product.description,
+        color: product.color || fallback.color || "multi",
+        type: product.type || (fallback.style === "custom" ? "custom" : "bracelet"),
+        beaded: typeof product.beaded === "boolean" ? product.beaded : true,
+        charm: typeof product.charm === "boolean" ? product.charm : (fallback.style || "") === "charm",
+        category: product.category || fallback.category || "bracelets",
+        badge: product.badge || fallback.badge || (index % 3 === 0 ? "New" : "Handmade"),
+        rating: Number.isFinite(rating) ? rating : 4.8,
+        sortRank: Number.isFinite(sortRank) ? sortRank : index + 20
+      };
+    });
+}
+
+function toProductRow(product, includeHoverImage = true) {
+  const row = {
+    id: product.id,
+    name: product.name,
+    price: Number(product.price),
+    image: product.image,
+    description: product.description,
+    color: product.color,
+    type: product.type,
+    beaded: Boolean(product.beaded),
+    charm: Boolean(product.charm),
+    category: product.category,
+    badge: product.badge,
+    rating: Number(product.rating),
+    sort_rank: Number(product.sortRank)
+  };
+
+  if (includeHoverImage) {
+    row.hover_image = product.hoverImage || null;
+  }
+
+  return row;
+}
+
+function toBaseProductRow(product) {
+  return {
+    id: product.id,
+    name: product.name,
+    price: Number(product.price),
+    image: product.image,
+    description: product.description
+  };
 }
 
 function getAdminSession() {
@@ -239,9 +418,28 @@ async function saveProducts(products) {
   const db = await getDb();
   if (!db) return;
 
-  const rows = normalizeProducts(products);
+  const normalizedProducts = normalizeProducts(products);
+  const rows = normalizedProducts.map((product) => toProductRow(product, productHoverImageColumnAvailable));
   const { error } = await db.from("products").upsert(rows, { onConflict: "id" });
-  if (error) throw error;
+  if (!error) return;
+
+  if (productHoverImageColumnAvailable) {
+    productHoverImageColumnAvailable = false;
+    console.warn("Product hover image column is not available yet. Run the README Supabase migration to persist hover images.");
+
+    const rowsWithoutHoverImage = normalizedProducts.map((product) => toProductRow(product, false));
+    const { error: retryError } = await db.from("products").upsert(rowsWithoutHoverImage, { onConflict: "id" });
+    if (!retryError) return;
+  }
+
+  if (productMetadataColumnsAvailable) {
+    productMetadataColumnsAvailable = false;
+    console.warn("Product metadata columns are not available yet. Run the README Supabase migration to persist color, type, beaded, charm, and hover image fields.");
+  }
+
+  const fallbackRows = normalizedProducts.map(toBaseProductRow);
+  const { error: fallbackError } = await db.from("products").upsert(fallbackRows, { onConflict: "id" });
+  if (fallbackError) throw fallbackError;
 }
 
 async function deleteProductRecord(productId) {
@@ -256,8 +454,20 @@ async function getProducts() {
   const db = await getDb();
   if (!db) return [...defaultProducts];
 
-  const { data, error } = await db.from("products").select("id,name,price,image,description");
+  const productColumns = productMetadataColumnsAvailable
+    ? `id,name,price,image,${productHoverImageColumnAvailable ? "hover_image," : ""}description,color,type,beaded,charm,category,badge,rating,sort_rank`
+    : `id,name,price,image,${productHoverImageColumnAvailable ? "hover_image," : ""}description`;
+  const { data, error } = await db.from("products").select(productColumns);
   if (error) {
+    if (productHoverImageColumnAvailable) {
+      productHoverImageColumnAvailable = false;
+      return getProducts();
+    }
+
+    if (productMetadataColumnsAvailable) {
+      productMetadataColumnsAvailable = false;
+      return getProducts();
+    }
     console.error(error);
     return [...defaultProducts];
   }
@@ -434,13 +644,31 @@ async function addToCart(productId) {
 
   await saveCart(cart);
   await updateHeaderState();
-  showToast(`${product.name} added to cart`);
+  await openCartDrawer(product.id);
 }
 
 async function removeFromCart(productId) {
   const cart = (await getCart()).filter((item) => item.id !== productId);
   await saveCart(cart);
   await renderCart();
+  await renderCartDrawer();
+  await updateHeaderState();
+}
+
+async function setCartItemQuantity(productId, quantity) {
+  const nextQuantity = Math.max(0, Number(quantity) || 0);
+  const cart = await getCart();
+  const existing = cart.find((item) => item.id === productId);
+
+  if (!existing && nextQuantity > 0) {
+    cart.push({ id: productId, quantity: nextQuantity });
+  } else if (existing) {
+    existing.quantity = nextQuantity;
+  }
+
+  await saveCart(cart.filter((item) => item.quantity > 0));
+  await renderCart();
+  await renderCartDrawer();
   await updateHeaderState();
 }
 
@@ -473,6 +701,20 @@ async function updateHeaderState() {
   cartCount.textContent = String(itemCount);
 }
 
+function setupCartDrawerTriggers() {
+  ensureCartDrawer();
+
+  document.querySelectorAll(".nav-cart").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const currentPage = window.location.pathname.split("/").pop() || "index.html";
+      if (currentPage === "cart.html") return;
+
+      event.preventDefault();
+      openCartDrawer();
+    });
+  });
+}
+
 function formatPrice(value) {
   return `$${value.toFixed(2)}`;
 }
@@ -497,21 +739,45 @@ const productMerchandising = {
 };
 
 const collectionState = {
+  category: "all",
   color: "all",
   style: "all",
+  type: "all",
+  feature: "all",
   price: "all",
   sort: "best"
 };
 
 function getProductMeta(product, index = 0) {
-  return productMerchandising[product.id] || {
-    badge: index % 3 === 0 ? "New" : "Handmade",
-    color: "multi",
-    style: "beaded",
-    category: "bracelets",
-    rating: 4.8,
-    sortRank: index + 20
+  const fallback = productMerchandising[product.id] || {};
+  const hasOnlyMigrationDefaults = Boolean(
+    fallback.badge &&
+    product.color === "multi" &&
+    product.type === "bracelet" &&
+    product.beaded === true &&
+    product.charm === false &&
+    product.category === "bracelets" &&
+    product.badge === "Handmade"
+  );
+  const source = hasOnlyMigrationDefaults ? {} : product;
+
+  return {
+    badge: source.badge || fallback.badge || (index % 3 === 0 ? "New" : "Handmade"),
+    color: source.color || fallback.color || "multi",
+    type: source.type || (fallback.style === "custom" ? "custom" : "bracelet"),
+    beaded: typeof source.beaded === "boolean" ? source.beaded : true,
+    charm: typeof source.charm === "boolean" ? source.charm : (fallback.style || "") === "charm",
+    category: source.category || fallback.category || "bracelets",
+    rating: Number(source.rating ?? fallback.rating) || 4.8,
+    sortRank: Number(source.sortRank ?? fallback.sortRank) || index + 20
   };
+}
+
+function getLegacyStyle(meta) {
+  if (meta.type === "custom") return "custom";
+  if (meta.charm) return "charm";
+  if (meta.beaded) return "beaded";
+  return meta.type || "bracelet";
 }
 
 function getProductWithMeta(product, index) {
@@ -521,7 +787,13 @@ function getProductWithMeta(product, index) {
 function productMatchesCollection(product) {
   const { meta } = product;
   const matchesColor = collectionState.color === "all" || meta.color === collectionState.color;
-  const matchesStyle = collectionState.style === "all" || meta.style === collectionState.style;
+  const matchesStyle = collectionState.style === "all" || getLegacyStyle(meta) === collectionState.style;
+  const matchesType = collectionState.type === "all" || meta.type === collectionState.type;
+  const matchesCategory = collectionState.category === "all" || meta.category === collectionState.category;
+  const matchesFeature =
+    collectionState.feature === "all" ||
+    (collectionState.feature === "beaded" && meta.beaded) ||
+    (collectionState.feature === "charm" && meta.charm);
   const matchesPrice =
     collectionState.price === "all" ||
     (collectionState.price === "under-17" && product.price < 17) ||
@@ -529,7 +801,7 @@ function productMatchesCollection(product) {
     (collectionState.price === "over-20" && product.price > 20) ||
     (collectionState.price === "sale" && meta.category === "sale");
 
-  return matchesColor && matchesStyle && matchesPrice;
+  return matchesColor && matchesStyle && matchesType && matchesCategory && matchesFeature && matchesPrice;
 }
 
 function sortCollectionProducts(products) {
@@ -538,6 +810,40 @@ function sortCollectionProducts(products) {
     if (collectionState.sort === "price-low") return a.price - b.price;
     if (collectionState.sort === "price-high") return b.price - a.price;
     return a.meta.sortRank - b.meta.sortRank;
+  });
+}
+
+function formatMetaLabel(value) {
+  return String(value || "")
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function createProductMetaChips(meta) {
+  const chips = [formatMetaLabel(meta.color), formatMetaLabel(meta.type)];
+  if (meta.beaded) chips.push("Beaded");
+  if (meta.charm) chips.push("Charm");
+
+  return `<div class="product-meta-chips">${chips.map((chip) => `<span>${chip}</span>`).join("")}</div>`;
+}
+
+function updateCollectionUrl() {
+  const params = new URLSearchParams();
+  ["category", "color", "style", "type", "feature", "price", "sort"].forEach((key) => {
+    if (collectionState[key] && collectionState[key] !== "all" && !(key === "sort" && collectionState[key] === "best")) {
+      params.set(key, collectionState[key]);
+    }
+  });
+
+  const query = params.toString();
+  const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+  window.history.replaceState({}, "", nextUrl);
+}
+
+function setActiveFilterPills() {
+  document.querySelectorAll(".filter-pill").forEach((pill) => {
+    const group = pill.dataset.filterGroup;
+    pill.classList.toggle("is-active", Boolean(group) && pill.dataset.filterValue === collectionState[group]);
   });
 }
 
@@ -555,13 +861,180 @@ function showToast(message) {
   window.setTimeout(() => toast.classList.remove("is-visible"), 2200);
 }
 
+function ensureCartDrawer() {
+  let drawer = document.getElementById("cart-drawer");
+  if (drawer) return drawer;
+
+  drawer = document.createElement("aside");
+  drawer.id = "cart-drawer";
+  drawer.className = "cart-drawer";
+  drawer.setAttribute("aria-hidden", "true");
+  drawer.innerHTML = `
+    <div class="cart-drawer-overlay" data-close-cart-drawer></div>
+    <section class="cart-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="cart-drawer-title">
+      <header class="cart-drawer-header">
+        <div class="cart-drawer-title-row">
+          <span class="cart-drawer-bag" aria-hidden="true">&#128722;</span>
+          <h2 id="cart-drawer-title">Your Cart</h2>
+        </div>
+        <button class="cart-drawer-close" type="button" data-close-cart-drawer aria-label="Close cart preview">x</button>
+      </header>
+      <div class="cart-drawer-body" id="cart-drawer-body"></div>
+      <footer class="cart-drawer-footer" id="cart-drawer-footer"></footer>
+    </section>
+  `;
+
+  document.body.appendChild(drawer);
+  drawer.querySelectorAll("[data-close-cart-drawer]").forEach((button) => {
+    button.addEventListener("click", closeCartDrawer);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && drawer.classList.contains("is-open")) {
+      closeCartDrawer();
+    }
+  });
+
+  return drawer;
+}
+
+function closeCartDrawer() {
+  const drawer = document.getElementById("cart-drawer");
+  if (!drawer) return;
+
+  drawer.classList.remove("is-open");
+  drawer.setAttribute("aria-hidden", "true");
+
+  const quickView = document.getElementById("quick-view");
+  if (!quickView || !quickView.classList.contains("is-open")) {
+    document.body.classList.remove("modal-open");
+  }
+}
+
+async function openCartDrawer(highlightProductId = "") {
+  const drawer = ensureCartDrawer();
+  await renderCartDrawer(highlightProductId);
+  drawer.classList.add("is-open");
+  drawer.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+}
+
+async function renderCartDrawer(highlightProductId = "") {
+  const drawer = ensureCartDrawer();
+  const body = drawer.querySelector("#cart-drawer-body");
+  const footer = drawer.querySelector("#cart-drawer-footer");
+  const title = drawer.querySelector("#cart-drawer-title");
+  if (!body || !footer || !title) return;
+
+  const products = await getProducts();
+  const cart = await getCart();
+  const itemCount = cart.reduce((total, item) => total + item.quantity, 0);
+  const subtotal = cart.reduce((total, cartItem) => {
+    const product = products.find((item) => item.id === cartItem.id);
+    return total + (product ? product.price * cartItem.quantity : 0);
+  }, 0);
+  const freeShippingTarget = 45;
+  const remaining = Math.max(0, freeShippingTarget - subtotal);
+  const progress = Math.min(100, (subtotal / freeShippingTarget) * 100);
+
+  title.textContent = itemCount === 1 ? "1 item" : `${itemCount} items`;
+
+  if (cart.length === 0) {
+    body.innerHTML = `
+      <div class="cart-drawer-empty">
+        <h3>Your cart is empty</h3>
+        <p>Pick a bright bracelet and your mini cart will keep it handy here.</p>
+        <a class="button button-primary" href="products.html">Shop bracelets</a>
+      </div>
+    `;
+    footer.innerHTML = "";
+    return;
+  }
+
+  const cartItems = cart
+    .map((cartItem) => {
+      const product = products.find((item) => item.id === cartItem.id);
+      if (!product) return "";
+      const isHighlighted = product.id === highlightProductId;
+      return `
+        <article class="cart-drawer-item${isHighlighted ? " is-new" : ""}">
+          <img src="${product.image}" alt="${product.name}" />
+          <div class="cart-drawer-item-copy">
+            <div>
+              <h3>${product.name}</h3>
+              <p>${formatPrice(product.price)}</p>
+            </div>
+            <div class="quantity-control" aria-label="Quantity for ${product.name}">
+              <button type="button" data-cart-quantity="${product.id}" data-quantity="${cartItem.quantity - 1}" aria-label="Decrease ${product.name} quantity">-</button>
+              <span>${cartItem.quantity}</span>
+              <button type="button" data-cart-quantity="${product.id}" data-quantity="${cartItem.quantity + 1}" aria-label="Increase ${product.name} quantity">+</button>
+            </div>
+          </div>
+          <div class="cart-drawer-item-side">
+            <strong>${formatPrice(product.price * cartItem.quantity)}</strong>
+            <button type="button" data-cart-remove="${product.id}">Remove</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  const recommendations = products
+    .filter((product) => !cart.some((item) => item.id === product.id))
+    .slice(0, 4)
+    .map((product) => `
+      <article class="cart-recommendation">
+        <img src="${product.image}" alt="${product.name}" />
+        <h3>${product.name}</h3>
+        <p>${formatPrice(product.price)}</p>
+        <button type="button" data-cart-recommendation="${product.id}">Add</button>
+      </article>
+    `)
+    .join("");
+
+  body.innerHTML = `
+    <div class="shipping-meter">
+      <p>${remaining > 0 ? `Add ${formatPrice(remaining)} to unlock free shipping!` : "You unlocked free shipping!"}</p>
+      <span><i style="width: ${progress}%"></i></span>
+    </div>
+    <div class="cart-drawer-items">${cartItems}</div>
+    <div class="cart-drawer-urgency">These handmade favourites are going fast.</div>
+    ${recommendations ? `
+      <section class="cart-recommendations">
+        <h3>Handpicked for you</h3>
+        <div class="cart-recommendation-grid">${recommendations}</div>
+      </section>
+    ` : ""}
+  `;
+
+  footer.innerHTML = `
+    <div class="cart-drawer-subtotal">
+      <span>Subtotal</span>
+      <strong>${formatPrice(subtotal)}</strong>
+    </div>
+    <a class="button button-primary cart-drawer-checkout" href="checkout.html">Checkout</a>
+    <a class="cart-drawer-cart-link" href="cart.html">View full cart</a>
+  `;
+
+  body.querySelectorAll("[data-cart-quantity]").forEach((button) => {
+    button.addEventListener("click", () => setCartItemQuantity(button.dataset.cartQuantity, button.dataset.quantity));
+  });
+  body.querySelectorAll("[data-cart-remove]").forEach((button) => {
+    button.addEventListener("click", () => removeFromCart(button.dataset.cartRemove));
+  });
+  body.querySelectorAll("[data-cart-recommendation]").forEach((button) => {
+    button.addEventListener("click", () => addToCart(button.dataset.cartRecommendation));
+  });
+}
+
 function createProductCard(product, options = {}) {
   const card = document.createElement("article");
-  card.className = "card";
+  const hasHoverImage = Boolean(product.hoverImage);
+  card.className = `card${hasHoverImage ? " has-hover-image" : ""}`;
   card.innerHTML = `
     <div class="product-media">
       <span class="product-badge">${product.meta.badge}</span>
-      <img src="${product.image}" alt="${product.name}" />
+      <img class="product-image product-image-primary" src="${product.image}" alt="${product.name}" />
+      ${hasHoverImage ? `<img class="product-image product-image-hover" src="${product.hoverImage}" alt="" aria-hidden="true" />` : ""}
       <div class="quick-actions">
         <button class="button add-button" data-product-id="${product.id}">Quick Add</button>
         <button class="quick-view-button" type="button" data-quick-view="${product.id}">Quick View</button>
@@ -570,6 +1043,7 @@ function createProductCard(product, options = {}) {
     <div class="card-content">
       <h3>${product.name}</h3>
       ${options.compact ? "" : `<p>${product.description}</p>`}
+      ${options.compact ? "" : createProductMetaChips(product.meta)}
       <p class="rating" aria-label="${product.meta.rating} out of 5 stars">★★★★★ <span>${product.meta.rating}</span></p>
       <div class="product-action">
         <span class="price">${formatPrice(product.price)}</span>
@@ -619,6 +1093,7 @@ function openQuickView(product) {
       <p class="product-badge">${product.meta.badge}</p>
       <h2 id="quick-view-title">${product.name}</h2>
       <p>${product.description}</p>
+      ${createProductMetaChips(product.meta)}
       <p class="rating">★★★★★ <span>${product.meta.rating}</span></p>
       <p class="product-price">${formatPrice(product.price)}</p>
       <div class="bundle-note">Bundle deal: add any 3 bracelets and save 15%.</div>
@@ -653,15 +1128,15 @@ function insertCollectionPromo(list, index) {
 
 function setupCollectionControls() {
   const params = new URLSearchParams(window.location.search);
+  if (params.get("category")) collectionState.category = params.get("category");
+  if (params.get("color")) collectionState.color = params.get("color");
   if (params.get("sort")) collectionState.sort = params.get("sort");
   if (params.get("style")) collectionState.style = params.get("style");
+  if (params.get("type")) collectionState.type = params.get("type");
+  if (params.get("feature")) collectionState.feature = params.get("feature");
   if (params.get("price")) collectionState.price = params.get("price");
 
-  const activeStyle = document.querySelector(`.filter-pill[data-filter-group="style"][data-filter-value="${collectionState.style}"]`);
-  if (activeStyle) {
-    document.querySelectorAll('.filter-pill[data-filter-group="style"]').forEach((pill) => pill.classList.remove("is-active"));
-    activeStyle.classList.add("is-active");
-  }
+  setActiveFilterPills();
 
   const priceFilter = document.getElementById("collection-price-filter");
   if (priceFilter) priceFilter.value = collectionState.price;
@@ -683,6 +1158,7 @@ function setupCollectionControls() {
       document.querySelectorAll(`.filter-pill[data-filter-group="${group}"]`).forEach((pill) => {
         pill.classList.toggle("is-active", pill === button);
       });
+      updateCollectionUrl();
       await renderProductList();
     });
   });
@@ -690,6 +1166,7 @@ function setupCollectionControls() {
   if (priceFilter) {
     priceFilter.addEventListener("change", async (event) => {
       collectionState.price = event.target.value;
+      updateCollectionUrl();
       await renderProductList();
     });
   }
@@ -697,6 +1174,7 @@ function setupCollectionControls() {
   if (sortControl) {
     sortControl.addEventListener("change", async (event) => {
       collectionState.sort = event.target.value;
+      updateCollectionUrl();
       await renderProductList();
     });
   }
@@ -832,23 +1310,24 @@ async function renderProductDetail() {
 
   const params = new URLSearchParams(window.location.search);
   const productId = params.get("id");
-  const product = (await getProducts()).find((item) => item.id === productId);
+  const product = getProductWithMeta((await getProducts()).find((item) => item.id === productId) || {}, 0);
 
-  if (!product) {
+  if (!product.id) {
     detail.innerHTML = `<p>Product not found. <a href="products.html">Back to shop</a></p>`;
     return;
   }
 
   detail.innerHTML = `
     <div class="product-detail-media">
-      <span class="product-badge">${getProductMeta(product).badge}</span>
+      <span class="product-badge">${product.meta.badge}</span>
       <img src="${product.image}" alt="${product.name}" />
     </div>
     <div class="product-detail-content">
       <p class="eyebrow">Stack-ready favourite</p>
       <h2>${product.name}</h2>
       <p class="product-detail-description">${product.description}</p>
-      <p class="rating">★★★★★ <span>${getProductMeta(product).rating}</span></p>
+      ${createProductMetaChips(product.meta)}
+      <p class="rating">★★★★★ <span>${product.meta.rating}</span></p>
       <p class="product-price">${formatPrice(product.price)}</p>
       <div class="bundle-note">Bundle deal: add any 3 bracelets and save 15%.</div>
       <div class="personalise-box">
@@ -928,15 +1407,29 @@ async function upsertProduct(event) {
   const nameInput = document.getElementById("product-name");
   const priceInput = document.getElementById("product-price");
   const imageInput = document.getElementById("product-image");
+  const hoverImageInput = document.getElementById("product-hover-image");
   const descriptionInput = document.getElementById("product-description");
+  const colorInput = document.getElementById("product-color");
+  const typeInput = document.getElementById("product-type");
+  const beadedInput = document.getElementById("product-beaded");
+  const charmInput = document.getElementById("product-charm");
+  const categoryInput = document.getElementById("product-category");
+  const badgeInput = document.getElementById("product-badge");
 
-  if (!idInput || !nameInput || !priceInput || !imageInput || !descriptionInput) return;
+  if (!idInput || !nameInput || !priceInput || !imageInput || !hoverImageInput || !descriptionInput || !colorInput || !typeInput || !beadedInput || !charmInput || !categoryInput || !badgeInput) return;
 
   const existingId = idInput.value.trim();
   const name = nameInput.value.trim();
   const price = Number(priceInput.value);
   const image = imageInput.value.trim();
+  const hoverImage = hoverImageInput.value.trim();
   const description = descriptionInput.value.trim();
+  const color = colorInput.value;
+  const type = typeInput.value;
+  const beaded = beadedInput.checked;
+  const charm = charmInput.checked;
+  const category = categoryInput.value;
+  const badge = badgeInput.value.trim() || "Handmade";
 
   if (!name || !Number.isFinite(price) || price <= 0 || !image || !description) {
     alert("Please fill in all fields with valid values.");
@@ -953,7 +1446,24 @@ async function upsertProduct(event) {
     return;
   }
 
-  const product = { id, name, price, image, description };
+  const existingProduct = products.find((item) => item.id === id);
+  const existingMeta = getProductMeta(existingProduct || {}, products.length);
+  const product = {
+    id,
+    name,
+    price,
+    image,
+    hoverImage,
+    description,
+    color,
+    type,
+    beaded,
+    charm,
+    category,
+    badge,
+    rating: existingProduct ? existingMeta.rating : 4.8,
+    sortRank: existingProduct ? existingMeta.sortRank : products.length + 20
+  };
   const index = products.findIndex((item) => item.id === id);
 
   if (index >= 0) {
@@ -972,14 +1482,22 @@ async function upsertProduct(event) {
 async function editProduct(productId) {
   const product = (await getProducts()).find((item) => item.id === productId);
   if (!product) return;
+  const meta = getProductMeta(product);
 
   document.getElementById("product-id").value = product.id;
   document.getElementById("product-name").value = product.name;
   document.getElementById("product-price").value = product.price;
   document.getElementById("product-image").value = product.image;
+  document.getElementById("product-hover-image").value = product.hoverImage || "";
   document.getElementById("product-description").value = product.description;
+  document.getElementById("product-color").value = meta.color;
+  document.getElementById("product-type").value = meta.type;
+  document.getElementById("product-beaded").checked = meta.beaded;
+  document.getElementById("product-charm").checked = meta.charm;
+  document.getElementById("product-category").value = meta.category;
+  document.getElementById("product-badge").value = meta.badge;
   document.getElementById("admin-submit").textContent = "Save Changes";
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  document.getElementById("admin-products").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function deleteProduct(productId) {
@@ -1000,14 +1518,19 @@ async function renderAdminProducts() {
 
   list.innerHTML = "";
 
-  (await getProducts()).forEach((product) => {
+  (await getProducts()).map(getProductWithMeta).forEach((product) => {
     const item = document.createElement("article");
     item.className = "admin-item";
     item.innerHTML = `
-      <img src="${product.image}" alt="${product.name}" />
+      <div class="admin-product-images">
+        <img src="${product.image}" alt="${product.name}" />
+        ${product.hoverImage ? `<img src="${product.hoverImage}" alt="" aria-hidden="true" />` : ""}
+      </div>
       <div class="admin-item-content">
         <h3>${product.name}</h3>
         <p>${product.description}</p>
+        ${createProductMetaChips(product.meta)}
+        ${product.hoverImage ? `<p>Hover image set</p>` : ""}
         <p class="price">${formatPrice(product.price)}</p>
       </div>
       <div class="admin-item-actions">
@@ -1349,24 +1872,45 @@ function handleCheckout() {
   const checkoutForm = document.getElementById("checkout-form");
   if (!checkoutForm) return;
 
-  const stripe = Stripe("pk_test_YOUR_TEST_PUBLISHABLE_KEY_HERE");
-  const elements = stripe.elements();
-  const cardElement = elements.create("card");
-  cardElement.mount("#card-element");
+  let stripe;
+  let cardElement;
 
-  cardElement.on("change", (event) => {
-    const displayError = document.getElementById("card-errors");
-    if (event.error) {
-      displayError.textContent = event.error.message;
-    } else {
-      displayError.textContent = "";
+  const submitButton = document.getElementById("submit-button");
+  const displayError = document.getElementById("card-errors");
+
+  async function initStripe() {
+    try {
+      const response = await fetch("/stripe-config");
+      const { publishableKey } = await response.json();
+
+      if (!publishableKey) {
+        throw new Error("Stripe publishable key is not configured. Add STRIPE_PUBLISHABLE_KEY=pk_test_... to .env.");
+      }
+
+      stripe = Stripe(publishableKey);
+      const elements = stripe.elements();
+      cardElement = elements.create("card");
+      cardElement.mount("#card-element");
+
+      cardElement.on("change", (event) => {
+        displayError.textContent = event.error ? event.error.message : "";
+      });
+
+      submitButton.disabled = false;
+    } catch (error) {
+      displayError.textContent = error.message;
+      submitButton.disabled = true;
     }
-  });
+  }
+
+  submitButton.disabled = true;
+  initStripe();
 
   checkoutForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const submitButton = document.getElementById("submit-button");
+    if (!stripe || !cardElement) return;
+
     submitButton.disabled = true;
     submitButton.textContent = "Processing...";
 
@@ -1419,6 +1963,7 @@ async function initPage() {
   await renderProductDetail();
   await renderCart();
   await updateHeaderState();
+  setupCartDrawerTriggers();
   await setupAdminPage();
   handleCheckout();
 }

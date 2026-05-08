@@ -51,7 +51,13 @@
         <button class="button" id="admin-logout" type="button">Log Out</button>
       </section>
 
-      <section class="admin-grid">
+      <nav class="admin-menu" aria-label="Admin sections">
+        <a href="#admin-products">Products</a>
+        <a href="#admin-slideshow">Homepage Slideshow</a>
+        <a href="#admin-users">Admin Users</a>
+      </nav>
+
+      <section class="admin-grid" id="admin-products">
         <form id="admin-form" class="checkout-form admin-form">
           <input id="product-id" name="productId" type="hidden" />
 
@@ -64,8 +70,53 @@
           <label for="product-image">Image URL</label>
           <input id="product-image" name="image" type="url" required />
 
+          <label for="product-hover-image">Hover image URL</label>
+          <input id="product-hover-image" name="hoverImage" type="url" placeholder="Optional alternate image shown on hover" />
+
           <label for="product-description">Description</label>
           <textarea id="product-description" name="description" rows="4" required></textarea>
+
+          <div class="admin-form-row">
+            <div>
+              <label for="product-color">Main colour</label>
+              <select id="product-color" name="color" required>
+                <option value="pink">Pink</option>
+                <option value="blue">Blue</option>
+                <option value="yellow">Yellow</option>
+                <option value="purple">Purple</option>
+                <option value="green">Green</option>
+                <option value="multi">Multi</option>
+              </select>
+            </div>
+            <div>
+              <label for="product-type">Type</label>
+              <select id="product-type" name="type" required>
+                <option value="bracelet">Bracelet</option>
+                <option value="custom">Custom</option>
+                <option value="stack">Stack</option>
+                <option value="gift-set">Gift set</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="admin-checkbox-row">
+            <label><input id="product-beaded" name="beaded" type="checkbox" checked /> Beaded</label>
+            <label><input id="product-charm" name="charm" type="checkbox" /> Charm</label>
+          </div>
+
+          <div class="admin-form-row">
+            <div>
+              <label for="product-category">Shop category</label>
+              <select id="product-category" name="category" required>
+                <option value="bracelets">Bracelets</option>
+                <option value="sale">Sale</option>
+              </select>
+            </div>
+            <div>
+              <label for="product-badge">Badge</label>
+              <input id="product-badge" name="badge" type="text" placeholder="New" />
+            </div>
+          </div>
 
           <div class="admin-form-actions">
             <button class="button button-primary" id="admin-submit" type="submit">Add Bracelet</button>
@@ -76,7 +127,7 @@
         <div id="admin-product-list" class="admin-list"></div>
       </section>
 
-      <section class="admin-users-section">
+      <section class="admin-users-section" id="admin-slideshow">
         <div class="section-heading">
           <p class="eyebrow">Homepage slideshow</p>
           <h2>Manage Hero Images</h2>
@@ -109,7 +160,7 @@
         </div>
       </section>
 
-      <section class="admin-users-section">
+      <section class="admin-users-section" id="admin-users">
         <div class="section-heading">
           <p class="eyebrow">Admin users</p>
           <h2>Manage Admin Users</h2>

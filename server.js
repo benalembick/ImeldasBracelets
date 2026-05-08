@@ -26,7 +26,14 @@ function loadEnvFile() {
 
 loadEnvFile();
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_YOUR_TEST_SECRET_KEY_HERE'); // Replace with your test secret key
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
+const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || '';
+
+if (!stripeSecretKey.startsWith('sk_')) {
+  console.warn('Stripe is not configured: STRIPE_SECRET_KEY must start with sk_test_ or sk_live_.');
+}
+
+const stripe = stripeSecretKey.startsWith('sk_') ? require('stripe')(stripeSecretKey) : null;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,9 +49,19 @@ app.get('/supabase-config', (_req, res) => {
   });
 });
 
+app.get('/stripe-config', (_req, res) => {
+  res.send({
+    publishableKey: stripePublishableKey.startsWith('pk_') ? stripePublishableKey : '',
+  });
+});
+
 // Create payment intent
 app.post('/create-payment-intent', async (req, res) => {
   try {
+    if (!stripe) {
+      throw new Error('Stripe secret key is not configured. Add STRIPE_SECRET_KEY=sk_test_... to .env.');
+    }
+
     const { amount } = req.body; // Amount in cents
 
     const paymentIntent = await stripe.paymentIntents.create({

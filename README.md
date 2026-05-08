@@ -28,7 +28,16 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
      name text not null,
      price numeric not null,
      image text not null,
-     description text not null
+     hover_image text,
+     description text not null,
+     color text not null default 'multi',
+     type text not null default 'bracelet',
+     beaded boolean not null default true,
+     charm boolean not null default false,
+     category text not null default 'bracelets',
+     badge text not null default 'Handmade',
+     rating numeric not null default 4.8,
+     sort_rank integer not null default 20
    );
 
    create table if not exists admin_users (
@@ -49,6 +58,19 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
    );
    ```
 
+   If you already created the `products` table before this update, run this migration:
+   ```sql
+   alter table products add column if not exists color text not null default 'multi';
+   alter table products add column if not exists hover_image text;
+   alter table products add column if not exists type text not null default 'bracelet';
+   alter table products add column if not exists beaded boolean not null default true;
+   alter table products add column if not exists charm boolean not null default false;
+   alter table products add column if not exists category text not null default 'bracelets';
+   alter table products add column if not exists badge text not null default 'Handmade';
+   alter table products add column if not exists rating numeric not null default 4.8;
+   alter table products add column if not exists sort_rank integer not null default 20;
+   ```
+
 3. Create a local `.env` file from `.env.example`, then add your real keys:
    ```sh
    copy .env.example .env
@@ -58,10 +80,11 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
    ```env
    SUPABASE_URL=https://your-project-ref.supabase.co
    SUPABASE_ANON_KEY=your_supabase_anon_key
-   STRIPE_SECRET_KEY=your_stripe_test_secret_key
+   STRIPE_SECRET_KEY=sk_test_your_stripe_test_secret_key
+   STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_test_publishable_key
    ```
 
-4. In `script.js`, replace `pk_test_YOUR_TEST_PUBLISHABLE_KEY_HERE` with your Stripe test publishable key.
+4. In Stripe, use the API keys from Developers > API keys. The publishable key starts with `pk_test_` and goes in `STRIPE_PUBLISHABLE_KEY`. The secret key starts with `sk_test_` and goes in `STRIPE_SECRET_KEY`.
 
 5. Run the server:
    ```sh
