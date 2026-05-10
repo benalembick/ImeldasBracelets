@@ -75,9 +75,9 @@ textarea {
   position: sticky;
   top: 2.55rem;
   z-index: 35;
-  background: rgba(255, 255, 255, 0.94);
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 8px 26px rgba(24, 54, 66, 0.06);
+  background: rgba(255, 252, 246, 0.95);
+  border-bottom: 1px solid rgba(194, 125, 105, 0.2);
+  box-shadow: 0 10px 30px rgba(24, 54, 66, 0.07);
   backdrop-filter: blur(18px);
 }
 
@@ -85,46 +85,37 @@ textarea {
 .footer-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1.1rem;
-  min-height: 4.6rem;
+  justify-content: flex-start;
+  gap: 0.9rem;
+  min-height: 7.55rem;
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.72rem;
+  flex: 0 0 auto;
+  justify-content: center;
   min-width: max-content;
+  margin-left: 0;
+  padding: 0;
+  border-radius: 6px;
+  background: transparent;
+  transition: transform 0.2s var(--ease);
 }
 
-.brand-mark {
-  display: inline-grid;
-  place-items: center;
-  width: 2.65rem;
-  height: 2.65rem;
-  border-radius: 999px;
-  color: #ffffff;
-  background: linear-gradient(135deg, var(--coral), var(--sea-dark));
-  font-weight: 900;
-  box-shadow: 0 10px 24px rgba(7, 139, 152, 0.22);
+.brand:hover {
+  transform: translateY(-1px);
 }
 
-.brand-copy {
-  display: grid;
-}
-
-.brand-name {
-  font-size: 1rem;
-  font-weight: 900;
-  line-height: 1.05;
-}
-
-.brand-tagline {
-  color: var(--muted);
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.brand-logo {
+  width: clamp(19rem, 31vw, 27rem);
+  height: auto;
+  max-height: 7.1rem;
+  object-fit: contain;
+  margin-left: -30%;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .nav-links,
@@ -137,7 +128,13 @@ textarea {
 
 .nav-links {
   flex: 1;
-  justify-content: center;
+  justify-content: flex-end;
+  min-width: 0;
+  gap: 0.22rem;
+}
+
+.header-icons {
+  margin-left: auto;
 }
 
 .nav-links a,
@@ -147,10 +144,10 @@ textarea {
   align-items: center;
   justify-content: center;
   min-height: 2.38rem;
-  padding: 0.45rem 0.72rem;
+  padding: 0.45rem 0.58rem;
   border-radius: 999px;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   font-weight: 800;
   transition: color 0.2s ease, background 0.2s ease, transform 0.2s var(--ease);
 }
@@ -176,7 +173,7 @@ textarea {
 .nav-cart {
   gap: 0.45rem;
   color: var(--ink) !important;
-  background: var(--sand);
+  background: #fff3df;
 }
 
 .cart-count {
@@ -383,7 +380,7 @@ h3 {
 
 .filter-sort-bar {
   position: sticky;
-  top: 7.1rem;
+  top: 9.95rem;
   z-index: 20;
   display: flex;
   align-items: center;
@@ -714,7 +711,7 @@ h3 {
 
 .admin-menu {
   position: sticky;
-  top: 7.1rem;
+  top: 9.95rem;
   z-index: 15;
   display: flex;
   gap: 0.55rem;
@@ -823,7 +820,7 @@ h3 {
 
 .product-detail-content {
   position: sticky;
-  top: 8rem;
+  top: 10.8rem;
   display: grid;
   gap: 0.8rem;
   padding: 1.25rem 0;
@@ -1658,7 +1655,7 @@ button:disabled {
 
 .admin-form {
   position: sticky;
-  top: 8rem;
+  top: 10.8rem;
 }
 
 .admin-stack,
@@ -1754,7 +1751,18 @@ button:disabled {
 
   .header-inner {
     flex-wrap: wrap;
-    padding: 0.6rem 0;
+    min-height: 7.35rem;
+    padding: 0.7rem 0;
+  }
+
+  .brand-logo {
+    width: clamp(20rem, 62vw, 24.5rem);
+    max-height: 6.65rem;
+  }
+
+  .filter-sort-bar,
+  .admin-menu {
+    top: 12.65rem;
   }
 }
 
@@ -1768,10 +1776,21 @@ button:disabled {
   }
 
   .header-inner {
+    min-height: 7.35rem;
     gap: 0.65rem;
+    padding: 0.45rem 0 0.55rem;
   }
 
-  .brand-tagline {
+  .brand-logo {
+    width: clamp(19rem, 64vw, 22rem);
+    max-height: 6.35rem;
+  }
+
+  .header-icons {
+    display: none;
+  }
+
+  .nav-links {
     display: none;
   }
 
@@ -1799,7 +1818,7 @@ button:disabled {
   }
 
   .filter-sort-bar {
-    top: 7.9rem;
+    top: 11.2rem;
     margin-left: -1rem;
     margin-right: -1rem;
     border-radius: 0;
@@ -1874,7 +1893,7 @@ button:disabled {
   }
 
   .admin-menu {
-    top: 7.9rem;
+    top: 11.2rem;
     margin-left: -1rem;
     margin-right: -1rem;
     border-radius: 0;
@@ -1956,5 +1975,12 @@ button:disabled {
 
   .admin-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-logo {
+    width: clamp(17.25rem, 86vw, 21rem);
+    max-height: 6rem;
   }
 }
