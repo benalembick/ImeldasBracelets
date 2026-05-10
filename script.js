@@ -993,6 +993,15 @@ function formatPrice(value) {
   return `$${value.toFixed(2)}`;
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 const productMerchandising = {
   "flower-fun": { badge: "Best Seller", color: "pink", style: "charm", category: "bracelets", rating: 4.9, sortRank: 1 },
   "sunshine-twist": { badge: "Waterproof", color: "yellow", style: "beaded", category: "bracelets", rating: 4.8, sortRank: 4 },
@@ -1782,6 +1791,149 @@ async function renderCheckoutSummary() {
     .join("");
 
   return true;
+}
+
+function formatGeoapifyAddress(result) {
+  if (!result) return "";
+  if (result.formatted) return result.formatted;
+
+  const street = [result.housenumber, result.street].filter(Boolean).join(" ");
+  const city = result.city || result.town || result.village || result.suburb || result.county;
+  const state = result.state || result.region;
+  const postcode = result.postcode;
+  const country = result.country;
+
+  return [street, city, state, postcode, country].filter(Boolean).join(", ");
+}
+
+function setupAddressLookup() {
+  const lookupInput = document.getElementById("address-lookup");
+  const statusEl = document.getElementById("address-lookup-status");
+  const resultsEl = document.getElementById("address-lookup-results");
+  const addressInput = document.getElementById("address");
+  if (!lookupInput || !statusEl || !resultsEl || !addressInput) return;
+
+  let controller;
+  let debounceTimer;
+  let geoapifyApiKey = "";
+
+  function setStatus(message) {
+    statusEl.textContent = message;
+  }
+
+  function clearResults() {
+    resultsEl.innerHTML = "";
+  }
+
+  async function getAddressLookupKey() {
+    if (geoapifyApiKey) return geoapifyApiKey;
+
+    const response = await fetch("/address-lookup-config");
+    const config = await response.json();
+    geoapifyApiKey = config.geoapifyApiKey || "";
+    return geoapifyApiKey;
+  }
+
+  async function fetchGeoapifySuggestions(query, options = {}) {
+    const params = new URLSearchParams({
+      text: query,
+      format: "json",
+      limit: "5",
+      apiKey: geoapifyApiKey
+    });
+
+    if (options.australiaOnly) {
+      params.set("filter", "countrycode:au");
+    } else {
+      params.set("bias", "countrycode:au");
+    }
+
+    const response = await fetch(`https://api.geoapify.com/v1/geocode/autocomplete?${params.toString()}`, {
+      headers: {
+        Accept: "application/json"
+      },
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      throw new Error("Address suggestions are unavailable right now. Please type your address manually.");
+    }
+
+    const data = await response.json();
+    return Array.isArray(data.results) ? data.results : [];
+  }
+
+  async function searchAddress() {
+    const query = lookupInput.value.trim();
+    clearResults();
+
+    if (query.length < 4) {
+      setStatus("Type at least 4 characters for Australian address suggestions.");
+      return;
+    }
+
+    if (controller) controller.abort();
+    controller = new AbortController();
+    setStatus("Searching Australian addresses...");
+
+    try {
+      await getAddressLookupKey();
+      if (!geoapifyApiKey) {
+        setStatus("Add GEOAPIFY_API_KEY to .env to enable automatic address suggestions.");
+        return;
+      }
+
+      let results = await fetchGeoapifySuggestions(query, { australiaOnly: true });
+      let usedFallback = false;
+
+      if (results.length === 0) {
+        results = await fetchGeoapifySuggestions(query, { australiaOnly: false });
+        usedFallback = true;
+      }
+
+      if (results.length === 0) {
+        setStatus("No matching addresses found. Try adding a suburb, city, or postcode.");
+        return;
+      }
+
+      setStatus(usedFallback ? "No Australian match found. Showing wider suggestions." : "Select the correct Australian address below.");
+      resultsEl.innerHTML = results
+        .map((result, index) => `
+          <button class="address-lookup-result" type="button" data-address-index="${index}">
+            ${escapeHtml(formatGeoapifyAddress(result))}
+          </button>
+        `)
+        .join("") +
+        `<p class="address-lookup-attribution">Address suggestions by <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a>.</p>`;
+
+      resultsEl.querySelectorAll("[data-address-index]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const selected = results[Number(button.dataset.addressIndex)];
+          addressInput.value = formatGeoapifyAddress(selected);
+          addressInput.focus();
+          clearResults();
+          setStatus("Address added. Check it looks right before payment.");
+        });
+      });
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        setStatus(error.message);
+      }
+    }
+  }
+
+  lookupInput.addEventListener("input", () => {
+    window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(searchAddress, 500);
+  });
+
+  lookupInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      window.clearTimeout(debounceTimer);
+      searchAddress();
+    }
+  });
 }
 
 async function upsertProduct(event) {
@@ -2587,6 +2739,7 @@ async function initPage() {
   await updateHeaderState();
   setupCartDrawerTriggers();
   await setupAdminPage();
+  setupAddressLookup();
   handleCheckout();
 }
 

@@ -1,3 +1,5 @@
+
+
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -28,6 +30,7 @@ loadEnvFile();
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
 const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || '';
+const geoapifyApiKey = process.env.GEOAPIFY_API_KEY || '';
 const mediaDir = path.join(__dirname, 'media');
 const productMediaDir = path.join(mediaDir, 'products');
 
@@ -56,6 +59,12 @@ app.get('/supabase-config', (_req, res) => {
 app.get('/stripe-config', (_req, res) => {
   res.send({
     publishableKey: stripePublishableKey.startsWith('pk_') ? stripePublishableKey : '',
+  });
+});
+
+app.get('/address-lookup-config', (_req, res) => {
+  res.send({
+    geoapifyApiKey,
   });
 });
 

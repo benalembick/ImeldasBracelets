@@ -994,6 +994,44 @@ button:disabled {
   font-size: 0.88rem;
 }
 
+.address-lookup {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.address-lookup-results {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.address-lookup-result {
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--ink);
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.address-lookup-result:hover,
+.address-lookup-result:focus {
+  border-color: var(--sea-dark);
+  box-shadow: 0 0 0 3px rgba(103, 216, 223, 0.2);
+}
+
+.address-lookup-attribution {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.address-lookup-attribution a {
+  color: var(--sea-dark);
+  font-weight: 900;
+}
+
 .payment-field-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

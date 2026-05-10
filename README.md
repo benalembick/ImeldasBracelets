@@ -2,6 +2,12 @@
 
 Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase data storage, and Stripe test payments.
 
+## netstat -ano | findstr :3000
+## taskkill /PID 62448 /F
+## npm start
+
+
+
 ## Files
 
 - `index.html` - homepage with brand intro and featured products.
