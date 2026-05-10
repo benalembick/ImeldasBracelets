@@ -2,3 +2,5 @@
 node_modules/
 media/products/*
 !media/products/.gitkeep
+media/slideshow/*
+!media/slideshow/.gitkeep

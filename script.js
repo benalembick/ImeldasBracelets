@@ -384,7 +384,7 @@ async function optimiseImageFile(file) {
   };
 }
 
-async function uploadProductImage(file) {
+async function uploadProductImage(file, folder = "products") {
   const optimised = await optimiseImageFile(file);
   let response;
 
@@ -394,6 +394,7 @@ async function uploadProductImage(file) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         filename: file.name,
+        folder,
         dataUrl: optimised.dataUrl
       })
     });
@@ -429,13 +430,14 @@ async function handleProductImageUpload(event, options = {}) {
   const imageInput = document.getElementById(options.inputId || "product-image");
   const status = document.getElementById(options.statusId || "product-image-upload-status");
   const savedMessage = options.savedMessage || "in media/products.";
+  const folder = options.folder || "products";
 
   if (!file || !imageInput || !status) return;
 
   try {
     status.textContent = `Optimising ${file.name}...`;
     event.target.disabled = true;
-    const uploaded = await uploadProductImage(file);
+    const uploaded = await uploadProductImage(file, folder);
     imageInput.value = uploaded.url;
     status.textContent = `Saved ${formatFileSize(uploaded.originalBytes)} as ${formatFileSize(uploaded.bytes || uploaded.optimisedBytes)} ${savedMessage}`;
   } catch (error) {
@@ -3010,9 +3012,11 @@ function resetSlideshowImageForm() {
   const imageForm = document.getElementById("admin-slideshow-image-form");
   const idInput = document.getElementById("slideshow-image-id");
   const submitButton = document.getElementById("admin-slideshow-submit");
+  const uploadStatus = document.getElementById("slideshow-image-upload-status");
   if (imageForm) imageForm.reset();
   if (idInput) idInput.value = "";
   if (submitButton) submitButton.textContent = "Add Image";
+  if (uploadStatus) uploadStatus.textContent = "Images are optimised before saving to the media folder.";
 }
 
 async function upsertSlideshowImage(event) {
@@ -3054,6 +3058,8 @@ async function editSlideshowImage(imageId) {
   document.getElementById("slideshow-image-id").value = image.id;
   document.getElementById("slideshow-image-url").value = image.src;
   document.getElementById("slideshow-image-alt").value = image.alt;
+  const uploadStatus = document.getElementById("slideshow-image-upload-status");
+  if (uploadStatus) uploadStatus.textContent = image.src.startsWith("/media/") ? "Using uploaded media folder image." : "Using an external image URL.";
   document.getElementById("admin-slideshow-submit").textContent = "Save Image";
   document.getElementById("admin-slideshow-image-form").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -3253,6 +3259,18 @@ async function setupAdminPage() {
   const slideshowImageForm = document.getElementById("admin-slideshow-image-form");
   if (slideshowImageForm) {
     slideshowImageForm.addEventListener("submit", upsertSlideshowImage);
+  }
+
+  const slideshowImageUploadInput = document.getElementById("slideshow-image-upload");
+  if (slideshowImageUploadInput) {
+    slideshowImageUploadInput.addEventListener("change", (event) => {
+      handleProductImageUpload(event, {
+        inputId: "slideshow-image-url",
+        statusId: "slideshow-image-upload-status",
+        savedMessage: "in media/slideshow.",
+        folder: "slideshow"
+      });
+    });
   }
 
   const slideshowResetButton = document.getElementById("admin-slideshow-reset");

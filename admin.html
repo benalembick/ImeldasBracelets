@@ -235,8 +235,10 @@
             <form id="admin-slideshow-image-form" class="checkout-form admin-form">
               <input id="slideshow-image-id" name="slideId" type="hidden" />
 
-              <label for="slideshow-image-url">Image URL</label>
-              <input id="slideshow-image-url" name="imageUrl" type="url" required />
+              <label for="slideshow-image-upload">Image</label>
+              <input id="slideshow-image-upload" name="imageUpload" type="file" accept="image/*" />
+              <input id="slideshow-image-url" name="imageUrl" type="text" placeholder="Upload an image or paste an image URL" required />
+              <p class="admin-upload-note" id="slideshow-image-upload-status">Images are optimised before saving to the media folder.</p>
 
               <label for="slideshow-image-alt">Image description</label>
               <input id="slideshow-image-alt" name="imageAlt" type="text" required />

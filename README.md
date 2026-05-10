@@ -20,6 +20,7 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
 - `script.js` - product rendering, cart logic, Supabase persistence, and Stripe payment handling.
 - `server.js` - Express server for static files, Supabase config, and Stripe payment intents.
 - `media/products/` - locally uploaded and optimised product images.
+- `media/slideshow/` - locally uploaded and optimised homepage slideshow images.
 
 ## Setup
 
@@ -216,6 +217,7 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
 - Product categories are managed from Admin > Categories. Create a main category by leaving Parent category set to "Main category"; create a subcategory by choosing a parent. Disabled categories stay in admin for existing products but are hidden from shop filters and product assignment.
 - Product filters on `products.html` are built from active admin categories, so future categories like Keyrings, Phone charms, Puffy paint cases, and Custom gifts can be added without changing the storefront code.
 - Product images uploaded in the admin Products section are compressed in the browser, saved under `media/products/`, and the saved media path is stored against the product.
+- Homepage slideshow images uploaded in Admin are compressed in the browser and saved under `media/slideshow/`.
 - The cart uses a browser cookie as an anonymous cart id.
 - `.env` is ignored by git so your real keys stay local.
 - The default admin login is `admin` / `admin123`; change it from the admin page after first login.

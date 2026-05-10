@@ -33,6 +33,7 @@ const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || '';
 const geoapifyApiKey = process.env.GEOAPIFY_API_KEY || '';
 const mediaDir = path.join(__dirname, 'media');
 const productMediaDir = path.join(mediaDir, 'products');
+const slideshowMediaDir = path.join(mediaDir, 'slideshow');
 
 if (!stripeSecretKey.startsWith('sk_')) {
   console.warn('Stripe is not configured: STRIPE_SECRET_KEY must start with sk_test_ or sk_live_.');
@@ -48,6 +49,7 @@ app.use(express.json({ limit: '12mb' }));
 app.use(express.static(path.join(__dirname)));
 
 fs.mkdirSync(productMediaDir, { recursive: true });
+fs.mkdirSync(slideshowMediaDir, { recursive: true });
 
 app.get('/supabase-config', (_req, res) => {
   res.send({
@@ -70,7 +72,7 @@ app.get('/address-lookup-config', (_req, res) => {
 
 app.post('/upload-product-image', async (req, res) => {
   try {
-    const { filename, dataUrl } = req.body || {};
+    const { filename, dataUrl, folder } = req.body || {};
     const match = typeof dataUrl === 'string'
       ? dataUrl.match(/^data:image\/(webp|jpeg|jpg|png);base64,([A-Za-z0-9+/=]+)$/)
       : null;
@@ -95,12 +97,14 @@ app.post('/upload-product-image', async (req, res) => {
       .replace(/^-+|-+$/g, '')
       .slice(0, 48) || 'product-image';
     const savedName = `${safeBaseName}-${Date.now()}.${extension}`;
-    const outputPath = path.join(productMediaDir, savedName);
+    const targetFolder = folder === 'slideshow' ? 'slideshow' : 'products';
+    const targetDir = targetFolder === 'slideshow' ? slideshowMediaDir : productMediaDir;
+    const outputPath = path.join(targetDir, savedName);
 
     fs.writeFileSync(outputPath, buffer);
 
     res.send({
-      url: `/media/products/${savedName}`,
+      url: `/media/${targetFolder}/${savedName}`,
       bytes: buffer.length,
     });
   } catch (error) {
