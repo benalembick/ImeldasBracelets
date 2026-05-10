@@ -250,6 +250,8 @@ let supabaseReady = false;
 let warnedAboutSupabase = false;
 let productMetadataColumnsAvailable = true;
 let productHoverImageColumnAvailable = true;
+let productStockColumnAvailable = true;
+let ordersTableAvailable = true;
 
 const defaultSlideshow = {
   intervalSeconds: 4,
@@ -363,7 +365,8 @@ function normalizeProducts(products) {
         category: product.category || fallback.category || "bracelets",
         badge: product.badge || fallback.badge || (index % 3 === 0 ? "New" : "Handmade"),
         rating: Number.isFinite(rating) ? rating : 4.8,
-        sortRank: Number.isFinite(sortRank) ? sortRank : index + 20
+        sortRank: Number.isFinite(sortRank) ? sortRank : index + 20,
+        stock: Math.max(0, Math.floor(Number(product.stock_quantity ?? product.stock ?? 12) || 0))
       };
     });
 }
@@ -389,10 +392,30 @@ function toProductRow(product, includeHoverImage = true) {
     row.hover_image = product.hoverImage || null;
   }
 
+  if (productStockColumnAvailable) {
+    row.stock_quantity = Math.max(0, Math.floor(Number(product.stock) || 0));
+  }
+
   return row;
 }
 
 function toBaseProductRow(product) {
+  const row = {
+    id: product.id,
+    name: product.name,
+    price: Number(product.price),
+    image: product.image,
+    description: product.description,
+  };
+
+  if (productStockColumnAvailable) {
+    row.stock_quantity = Math.max(0, Math.floor(Number(product.stock) || 0));
+  }
+
+  return row;
+}
+
+function toMinimalProductRow(product) {
   return {
     id: product.id,
     name: product.name,
@@ -423,6 +446,12 @@ async function saveProducts(products) {
   const { error } = await db.from("products").upsert(rows, { onConflict: "id" });
   if (!error) return;
 
+  if (productStockColumnAvailable) {
+    productStockColumnAvailable = false;
+    console.warn("Product stock column is not available yet. Run the README Supabase migration to persist stock quantities.");
+    return saveProducts(normalizedProducts);
+  }
+
   if (productHoverImageColumnAvailable) {
     productHoverImageColumnAvailable = false;
     console.warn("Product hover image column is not available yet. Run the README Supabase migration to persist hover images.");
@@ -439,7 +468,11 @@ async function saveProducts(products) {
 
   const fallbackRows = normalizedProducts.map(toBaseProductRow);
   const { error: fallbackError } = await db.from("products").upsert(fallbackRows, { onConflict: "id" });
-  if (fallbackError) throw fallbackError;
+  if (!fallbackError) return;
+
+  const minimalRows = normalizedProducts.map(toMinimalProductRow);
+  const { error: minimalError } = await db.from("products").upsert(minimalRows, { onConflict: "id" });
+  if (minimalError) throw minimalError;
 }
 
 async function deleteProductRecord(productId) {
@@ -452,13 +485,18 @@ async function deleteProductRecord(productId) {
 
 async function getProducts() {
   const db = await getDb();
-  if (!db) return [...defaultProducts];
+  if (!db) return normalizeProducts(defaultProducts);
 
   const productColumns = productMetadataColumnsAvailable
-    ? `id,name,price,image,${productHoverImageColumnAvailable ? "hover_image," : ""}description,color,type,beaded,charm,category,badge,rating,sort_rank`
-    : `id,name,price,image,${productHoverImageColumnAvailable ? "hover_image," : ""}description`;
+    ? `id,name,price,image,${productHoverImageColumnAvailable ? "hover_image," : ""}description,color,type,beaded,charm,category,badge,rating,sort_rank${productStockColumnAvailable ? ",stock_quantity" : ""}`
+    : `id,name,price,image,${productHoverImageColumnAvailable ? "hover_image," : ""}description${productStockColumnAvailable ? ",stock_quantity" : ""}`;
   const { data, error } = await db.from("products").select(productColumns);
   if (error) {
+    if (productStockColumnAvailable) {
+      productStockColumnAvailable = false;
+      return getProducts();
+    }
+
     if (productHoverImageColumnAvailable) {
       productHoverImageColumnAvailable = false;
       return getProducts();
@@ -469,11 +507,11 @@ async function getProducts() {
       return getProducts();
     }
     console.error(error);
-    return [...defaultProducts];
+    return normalizeProducts(defaultProducts);
   }
 
   const products = normalizeProducts(data || []);
-  return products.length > 0 ? products : [...defaultProducts];
+  return products.length > 0 ? products : normalizeProducts(defaultProducts);
 }
 
 async function ensureProductCatalog() {
@@ -531,6 +569,84 @@ async function ensureAdminUsers() {
   if (users.length === 0) {
     await saveAdminUsers([{ username: "admin", password: "admin123" }]);
   }
+}
+
+function buildOrderRows(data) {
+  return (data || [])
+    .filter((order) => order && order.id)
+    .map((order) => ({
+      id: order.id,
+      createdAt: order.created_at || "",
+      customerName: order.customer_name || "",
+      customerEmail: order.customer_email || "",
+      shippingAddress: order.shipping_address || "",
+      items: Array.isArray(order.items) ? order.items : [],
+      subtotal: Number(order.subtotal) || 0,
+      shippingAmount: Number(order.shipping_amount) || 0,
+      total: Number(order.total) || 0,
+      paymentIntentId: order.payment_intent_id || "",
+      status: order.status || "paid"
+    }));
+}
+
+async function getOrders() {
+  const db = await getDb();
+  if (!db || !ordersTableAvailable) return [];
+
+  const { data, error } = await db
+    .from("orders")
+    .select("id,created_at,customer_name,customer_email,shipping_address,items,subtotal,shipping_amount,total,payment_intent_id,status")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    ordersTableAvailable = false;
+    console.warn("Orders table is not available yet. Run the README Supabase migration to store and view orders.");
+    return [];
+  }
+
+  return buildOrderRows(data);
+}
+
+async function saveOrder(order) {
+  const db = await getDb();
+  if (!db || !ordersTableAvailable) return null;
+
+  const row = {
+    id: order.id,
+    customer_name: order.customerName,
+    customer_email: order.customerEmail,
+    shipping_address: order.shippingAddress,
+    items: order.items,
+    subtotal: order.subtotal,
+    shipping_amount: order.shippingAmount,
+    total: order.total,
+    payment_intent_id: order.paymentIntentId,
+    status: order.status
+  };
+
+  const { error } = await db.from("orders").insert(row);
+  if (error) {
+    ordersTableAvailable = false;
+    console.warn("Order could not be saved. Run the README Supabase migration to enable order history.");
+    return null;
+  }
+
+  return row.id;
+}
+
+async function decrementStockForOrder(orderItems) {
+  const products = await getProducts();
+  const nextProducts = products.map((product) => {
+    const orderedItem = orderItems.find((item) => item.productId === product.id);
+    if (!orderedItem) return product;
+
+    return {
+      ...product,
+      stock: Math.max(0, Math.floor(Number(product.stock) || 0) - orderedItem.quantity)
+    };
+  });
+
+  await saveProducts(nextProducts);
 }
 
 function normalizeSlideshowSettings(value) {
@@ -630,13 +746,44 @@ async function clearCart() {
   if (error) throw error;
 }
 
+function getStockLabel(product) {
+  const stock = Math.max(0, Math.floor(Number(product.stock) || 0));
+  if (stock === 0) return "Out of stock";
+  if (stock <= 3) return `Only ${stock} left`;
+  return `${stock} in stock`;
+}
+
+async function validateCartStock(cart = null, products = null) {
+  const sourceCart = cart || await getCart();
+  const sourceProducts = products || await getProducts();
+  const unavailable = sourceCart
+    .map((cartItem) => {
+      const product = sourceProducts.find((item) => item.id === cartItem.id);
+      if (!product) return null;
+      const stock = Math.max(0, Math.floor(Number(product.stock) || 0));
+      return cartItem.quantity > stock ? { product, requested: cartItem.quantity, stock } : null;
+    })
+    .filter(Boolean);
+
+  return unavailable;
+}
+
 async function addToCart(productId) {
   const cart = await getCart();
   const product = (await getProducts()).find((item) => item.id === productId);
   if (!product) return;
 
+  if (product.stock <= 0) {
+    await showPageAlert("Sorry, this bracelet is currently out of stock.");
+    return;
+  }
+
   const existing = cart.find((item) => item.id === productId);
   if (existing) {
+    if (existing.quantity >= product.stock) {
+      await showPageAlert(`Only ${product.stock} available for ${product.name}.`);
+      return;
+    }
     existing.quantity += 1;
   } else {
     cart.push({ id: product.id, quantity: 1 });
@@ -658,12 +805,18 @@ async function removeFromCart(productId) {
 async function setCartItemQuantity(productId, quantity) {
   const nextQuantity = Math.max(0, Number(quantity) || 0);
   const cart = await getCart();
+  const product = (await getProducts()).find((item) => item.id === productId);
   const existing = cart.find((item) => item.id === productId);
+  const cappedQuantity = product ? Math.min(nextQuantity, Math.max(0, product.stock)) : nextQuantity;
 
-  if (!existing && nextQuantity > 0) {
-    cart.push({ id: productId, quantity: nextQuantity });
+  if (product && nextQuantity > product.stock) {
+    await showPageAlert(`Only ${product.stock} available for ${product.name}.`);
+  }
+
+  if (!existing && cappedQuantity > 0) {
+    cart.push({ id: productId, quantity: cappedQuantity });
   } else if (existing) {
-    existing.quantity = nextQuantity;
+    existing.quantity = cappedQuantity;
   }
 
   await saveCart(cart.filter((item) => item.quantity > 0));
@@ -861,6 +1014,57 @@ function showToast(message) {
   window.setTimeout(() => toast.classList.remove("is-visible"), 2200);
 }
 
+function showPageAlert(message, title = "Imelda's Bracelets") {
+  return new Promise((resolve) => {
+    let alertOverlay = document.getElementById("page-alert");
+    if (!alertOverlay) {
+      alertOverlay = document.createElement("div");
+      alertOverlay.id = "page-alert";
+      alertOverlay.className = "page-alert";
+      alertOverlay.setAttribute("aria-hidden", "true");
+      alertOverlay.innerHTML = `
+        <div class="page-alert-backdrop" data-page-alert-close></div>
+        <section class="page-alert-panel" role="alertdialog" aria-modal="true" aria-labelledby="page-alert-title" aria-describedby="page-alert-message">
+          <h2 id="page-alert-title"></h2>
+          <p id="page-alert-message"></p>
+          <button class="button button-primary" type="button" data-page-alert-close>OK</button>
+        </section>
+      `;
+      document.body.appendChild(alertOverlay);
+    }
+
+    const titleEl = document.getElementById("page-alert-title");
+    const messageEl = document.getElementById("page-alert-message");
+    const closeButtons = alertOverlay.querySelectorAll("[data-page-alert-close]");
+    const closeButton = alertOverlay.querySelector(".page-alert-panel button");
+
+    if (titleEl) titleEl.textContent = title;
+    if (messageEl) messageEl.textContent = message;
+
+    function closeAlert() {
+      alertOverlay.classList.remove("is-open");
+      alertOverlay.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("modal-open");
+      document.removeEventListener("keydown", handleAlertKeydown);
+      closeButtons.forEach((button) => button.removeEventListener("click", closeAlert));
+      resolve();
+    }
+
+    function handleAlertKeydown(event) {
+      if (event.key === "Escape" || event.key === "Enter") {
+        closeAlert();
+      }
+    }
+
+    closeButtons.forEach((button) => button.addEventListener("click", closeAlert));
+    document.addEventListener("keydown", handleAlertKeydown);
+    alertOverlay.classList.add("is-open");
+    alertOverlay.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
+    if (closeButton) closeButton.focus();
+  });
+}
+
 function ensureCartDrawer() {
   let drawer = document.getElementById("cart-drawer");
   if (drawer) return drawer;
@@ -979,7 +1183,7 @@ async function renderCartDrawer(highlightProductId = "") {
     .join("");
 
   const recommendations = products
-    .filter((product) => !cart.some((item) => item.id === product.id))
+    .filter((product) => Number(product.stock) > 0 && !cart.some((item) => item.id === product.id))
     .slice(0, 4)
     .map((product) => `
       <article class="cart-recommendation">
@@ -1029,6 +1233,7 @@ async function renderCartDrawer(highlightProductId = "") {
 function createProductCard(product, options = {}) {
   const card = document.createElement("article");
   const hasHoverImage = Boolean(product.hoverImage);
+  const isInStock = Number(product.stock) > 0;
   card.className = `card${hasHoverImage ? " has-hover-image" : ""}`;
   card.innerHTML = `
     <div class="product-media">
@@ -1036,7 +1241,7 @@ function createProductCard(product, options = {}) {
       <img class="product-image product-image-primary" src="${product.image}" alt="${product.name}" />
       ${hasHoverImage ? `<img class="product-image product-image-hover" src="${product.hoverImage}" alt="" aria-hidden="true" />` : ""}
       <div class="quick-actions">
-        <button class="button add-button" data-product-id="${product.id}">Quick Add</button>
+        <button class="button add-button" data-product-id="${product.id}" ${isInStock ? "" : "disabled"}>${isInStock ? "Quick Add" : "Sold Out"}</button>
         <button class="quick-view-button" type="button" data-quick-view="${product.id}">Quick View</button>
       </div>
     </div>
@@ -1044,6 +1249,7 @@ function createProductCard(product, options = {}) {
       <h3>${product.name}</h3>
       ${options.compact ? "" : `<p>${product.description}</p>`}
       ${options.compact ? "" : createProductMetaChips(product.meta)}
+      <p class="stock-note ${isInStock ? "" : "is-empty"}">${getStockLabel(product)}</p>
       <p class="rating" aria-label="${product.meta.rating} out of 5 stars">★★★★★ <span>${product.meta.rating}</span></p>
       <div class="product-action">
         <span class="price">${formatPrice(product.price)}</span>
@@ -1086,6 +1292,7 @@ function openQuickView(product) {
   const modal = document.getElementById("quick-view");
   const content = document.getElementById("quick-view-content");
   if (!modal || !content) return;
+  const isInStock = Number(product.stock) > 0;
 
   content.innerHTML = `
     <img src="${product.image}" alt="${product.name}" />
@@ -1094,10 +1301,11 @@ function openQuickView(product) {
       <h2 id="quick-view-title">${product.name}</h2>
       <p>${product.description}</p>
       ${createProductMetaChips(product.meta)}
+      <p class="stock-note ${isInStock ? "" : "is-empty"}">${getStockLabel(product)}</p>
       <p class="rating">★★★★★ <span>${product.meta.rating}</span></p>
       <p class="product-price">${formatPrice(product.price)}</p>
       <div class="bundle-note">Bundle deal: add any 3 bracelets and save 15%.</div>
-      <button class="button button-primary" id="quick-view-add">Add to Cart</button>
+      <button class="button button-primary" id="quick-view-add" ${isInStock ? "" : "disabled"}>${isInStock ? "Add to Cart" : "Sold Out"}</button>
       <a class="quick-view-link" href="product.html?id=${product.id}">View full details</a>
     </div>
   `;
@@ -1316,6 +1524,7 @@ async function renderProductDetail() {
     detail.innerHTML = `<p>Product not found. <a href="products.html">Back to shop</a></p>`;
     return;
   }
+  const isInStock = Number(product.stock) > 0;
 
   detail.innerHTML = `
     <div class="product-detail-media">
@@ -1327,6 +1536,7 @@ async function renderProductDetail() {
       <h2>${product.name}</h2>
       <p class="product-detail-description">${product.description}</p>
       ${createProductMetaChips(product.meta)}
+      <p class="stock-note ${isInStock ? "" : "is-empty"}">${getStockLabel(product)}</p>
       <p class="rating">★★★★★ <span>${product.meta.rating}</span></p>
       <p class="product-price">${formatPrice(product.price)}</p>
       <div class="bundle-note">Bundle deal: add any 3 bracelets and save 15%.</div>
@@ -1334,7 +1544,7 @@ async function renderProductDetail() {
         <h3>Personalise it</h3>
         <p>Add a tiny initial charm or custom colour note at checkout.</p>
       </div>
-      <button class="button button-primary" id="add-product-button">Add to Cart</button>
+      <button class="button button-primary" id="add-product-button" ${isInStock ? "" : "disabled"}>${isInStock ? "Add to Cart" : "Sold Out"}</button>
     </div>
   `;
 
@@ -1345,7 +1555,7 @@ async function renderProductDetail() {
       <strong>${product.name}</strong>
       <span>${formatPrice(product.price)}</span>
     </div>
-    <button class="button button-primary" type="button" id="sticky-add-product-button">Add to Cart</button>
+    <button class="button button-primary" type="button" id="sticky-add-product-button" ${isInStock ? "" : "disabled"}>${isInStock ? "Add to Cart" : "Sold Out"}</button>
   `;
   document.body.appendChild(sticky);
 
@@ -1406,6 +1616,7 @@ async function upsertProduct(event) {
   const idInput = document.getElementById("product-id");
   const nameInput = document.getElementById("product-name");
   const priceInput = document.getElementById("product-price");
+  const stockInput = document.getElementById("product-stock");
   const imageInput = document.getElementById("product-image");
   const hoverImageInput = document.getElementById("product-hover-image");
   const descriptionInput = document.getElementById("product-description");
@@ -1416,11 +1627,12 @@ async function upsertProduct(event) {
   const categoryInput = document.getElementById("product-category");
   const badgeInput = document.getElementById("product-badge");
 
-  if (!idInput || !nameInput || !priceInput || !imageInput || !hoverImageInput || !descriptionInput || !colorInput || !typeInput || !beadedInput || !charmInput || !categoryInput || !badgeInput) return;
+  if (!idInput || !nameInput || !priceInput || !stockInput || !imageInput || !hoverImageInput || !descriptionInput || !colorInput || !typeInput || !beadedInput || !charmInput || !categoryInput || !badgeInput) return;
 
   const existingId = idInput.value.trim();
   const name = nameInput.value.trim();
   const price = Number(priceInput.value);
+  const stock = Math.max(0, Math.floor(Number(stockInput.value)));
   const image = imageInput.value.trim();
   const hoverImage = hoverImageInput.value.trim();
   const description = descriptionInput.value.trim();
@@ -1431,8 +1643,8 @@ async function upsertProduct(event) {
   const category = categoryInput.value;
   const badge = badgeInput.value.trim() || "Handmade";
 
-  if (!name || !Number.isFinite(price) || price <= 0 || !image || !description) {
-    alert("Please fill in all fields with valid values.");
+  if (!name || !Number.isFinite(price) || price <= 0 || !Number.isFinite(stock) || !image || !description) {
+    await showPageAlert("Please fill in all fields with valid values.");
     return;
   }
 
@@ -1442,7 +1654,7 @@ async function upsertProduct(event) {
 
   const duplicate = products.find((product) => product.id === id && product.id !== existingId);
   if (duplicate) {
-    alert("A bracelet with that name already exists. Please use a different name.");
+    await showPageAlert("A bracelet with that name already exists. Please use a different name.");
     return;
   }
 
@@ -1452,6 +1664,7 @@ async function upsertProduct(event) {
     id,
     name,
     price,
+    stock,
     image,
     hoverImage,
     description,
@@ -1487,6 +1700,7 @@ async function editProduct(productId) {
   document.getElementById("product-id").value = product.id;
   document.getElementById("product-name").value = product.name;
   document.getElementById("product-price").value = product.price;
+  document.getElementById("product-stock").value = product.stock;
   document.getElementById("product-image").value = product.image;
   document.getElementById("product-hover-image").value = product.hoverImage || "";
   document.getElementById("product-description").value = product.description;
@@ -1503,7 +1717,7 @@ async function editProduct(productId) {
 async function deleteProduct(productId) {
   const current = await getProducts();
   if (current.length <= 1) {
-    alert("Keep at least one bracelet in the shop.");
+    await showPageAlert("Keep at least one bracelet in the shop.");
     return;
   }
 
@@ -1531,6 +1745,7 @@ async function renderAdminProducts() {
         <p>${product.description}</p>
         ${createProductMetaChips(product.meta)}
         ${product.hoverImage ? `<p>Hover image set</p>` : ""}
+        <p class="stock-note ${product.stock > 0 ? "" : "is-empty"}">${getStockLabel(product)}</p>
         <p class="price">${formatPrice(product.price)}</p>
       </div>
       <div class="admin-item-actions">
@@ -1584,6 +1799,60 @@ async function renderAdminUsers() {
   });
 }
 
+async function renderAdminOrders() {
+  const orderList = document.getElementById("admin-order-list");
+  if (!orderList) return;
+
+  const orders = await getOrders();
+  orderList.innerHTML = "";
+
+  if (!ordersTableAvailable) {
+    orderList.innerHTML = `
+      <article class="admin-item admin-order-item">
+        <div class="admin-item-content">
+          <h3>Orders are not connected yet</h3>
+          <p>Add the orders table from the README migration, then new paid checkouts will appear here.</p>
+        </div>
+      </article>
+    `;
+    return;
+  }
+
+  if (orders.length === 0) {
+    orderList.innerHTML = `
+      <article class="admin-item admin-order-item">
+        <div class="admin-item-content">
+          <h3>No orders yet</h3>
+          <p>Paid checkouts will show customer, shipping, and item details here.</p>
+        </div>
+      </article>
+    `;
+    return;
+  }
+
+  orders.forEach((order) => {
+    const item = document.createElement("article");
+    item.className = "admin-item admin-order-item";
+    const placedDate = order.createdAt ? new Date(order.createdAt).toLocaleString() : "Just now";
+    const itemLines = order.items
+      .map((orderItem) => `${orderItem.quantity} x ${orderItem.name} (${formatPrice(Number(orderItem.price) || 0)} each)`)
+      .join("<br />");
+
+    item.innerHTML = `
+      <div class="admin-item-content">
+        <h3>${order.customerName || "Customer"} - ${formatPrice(order.total)}</h3>
+        <p><strong>Placed:</strong> ${placedDate}</p>
+        <p><strong>Email:</strong> ${order.customerEmail || "Not supplied"}</p>
+        <p><strong>Shipping:</strong> ${order.shippingAddress || "Not supplied"}</p>
+        <p><strong>Status:</strong> ${formatMetaLabel(order.status)}</p>
+        <p><strong>Payment:</strong> ${order.paymentIntentId || "Recorded after payment"}</p>
+        <p><strong>Items:</strong><br />${itemLines || "No item details saved"}</p>
+      </div>
+    `;
+    orderList.appendChild(item);
+  });
+}
+
 async function renderAdminSlideshow() {
   const list = document.getElementById("admin-slideshow-list");
   const intervalInput = document.getElementById("slideshow-interval");
@@ -1625,7 +1894,7 @@ async function saveSlideshowTiming(event) {
 
   const intervalSeconds = Number(intervalInput.value);
   if (!Number.isFinite(intervalSeconds) || intervalSeconds < 1 || intervalSeconds > 30) {
-    alert("Please choose a display time from 1 to 30 seconds.");
+    await showPageAlert("Please choose a display time from 1 to 30 seconds.");
     return;
   }
 
@@ -1655,7 +1924,7 @@ async function upsertSlideshowImage(event) {
   const src = urlInput.value.trim();
   const alt = altInput.value.trim();
   if (!src || !alt) {
-    alert("Please enter an image URL and description.");
+    await showPageAlert("Please enter an image URL and description.");
     return;
   }
 
@@ -1689,7 +1958,7 @@ async function editSlideshowImage(imageId) {
 async function deleteSlideshowImage(imageId) {
   const settings = await getSlideshowSettings();
   if (settings.images.length <= 1) {
-    alert("Keep at least one slideshow image.");
+    await showPageAlert("Keep at least one slideshow image.");
     return;
   }
 
@@ -1704,13 +1973,13 @@ async function deleteSlideshowImage(imageId) {
 async function deleteAdminUser(username) {
   const users = await getAdminUsers();
   if (users.length <= 1) {
-    alert("Keep at least one admin user.");
+    await showPageAlert("Keep at least one admin user.");
     return;
   }
 
   const currentUserName = getAdminSession();
   if (currentUserName === username) {
-    alert("You cannot delete the user currently logged in.");
+    await showPageAlert("You cannot delete the user currently logged in.");
     return;
   }
 
@@ -1731,14 +2000,14 @@ async function upsertAdminUser(event) {
   const password = passwordInput.value.trim();
 
   if (!username || !password) {
-    alert("Please enter a username and password.");
+    await showPageAlert("Please enter a username and password.");
     return;
   }
 
   const users = await getAdminUsers();
   const usernameTaken = users.find((user) => user.username === username && user.username !== originalUsername);
   if (usernameTaken) {
-    alert("That username is already in use.");
+    await showPageAlert("That username is already in use.");
     return;
   }
 
@@ -1762,6 +2031,38 @@ async function upsertAdminUser(event) {
   await renderAdminUsers();
 }
 
+function showAdminSection(sectionId = "admin-products") {
+  const sections = document.querySelectorAll("[data-admin-section]");
+  if (sections.length === 0) return;
+
+  const targetId = Array.from(sections).some((section) => section.id === sectionId) ? sectionId : "admin-products";
+
+  sections.forEach((section) => {
+    section.hidden = section.id !== targetId;
+  });
+
+  document.querySelectorAll("[data-admin-section-link]").forEach((link) => {
+    const isActive = link.getAttribute("href") === `#${targetId}`;
+    link.classList.toggle("is-active", isActive);
+    if (isActive) {
+      link.setAttribute("aria-current", "page");
+    } else {
+      link.removeAttribute("aria-current");
+    }
+  });
+
+  if (window.location.hash !== `#${targetId}`) {
+    window.history.replaceState({}, "", `${window.location.pathname}#${targetId}`);
+  }
+}
+
+async function renderAdminDashboard() {
+  await renderAdminProducts();
+  await renderAdminOrders();
+  await renderAdminSlideshow();
+  await renderAdminUsers();
+}
+
 function updateAdminVisibility(isLoggedIn) {
   const loginSection = document.getElementById("admin-login-section");
   const dashboardSection = document.getElementById("admin-dashboard");
@@ -1769,6 +2070,9 @@ function updateAdminVisibility(isLoggedIn) {
 
   loginSection.hidden = isLoggedIn;
   dashboardSection.hidden = !isLoggedIn;
+  if (isLoggedIn) {
+    showAdminSection((window.location.hash || "#admin-products").replace("#", ""));
+  }
 }
 
 async function handleAdminLogin(event) {
@@ -1783,16 +2087,14 @@ async function handleAdminLogin(event) {
   const user = (await getAdminUsers()).find((item) => item.username === username && item.password === password);
 
   if (!user) {
-    alert("Invalid username or password.");
+    await showPageAlert("Invalid username or password.");
     return;
   }
 
   setAdminSession(user.username);
   document.getElementById("admin-login-form").reset();
   updateAdminVisibility(true);
-  await renderAdminProducts();
-  await renderAdminSlideshow();
-  await renderAdminUsers();
+  await renderAdminDashboard();
 }
 
 function handleAdminLogout() {
@@ -1863,9 +2165,22 @@ async function setupAdminPage() {
     logoutButton.addEventListener("click", handleAdminLogout);
   }
 
-  await renderAdminProducts();
-  await renderAdminSlideshow();
-  await renderAdminUsers();
+  document.querySelectorAll("[data-admin-section-link]").forEach((link) => {
+    link.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const sectionId = (link.getAttribute("href") || "#admin-products").replace("#", "");
+      showAdminSection(sectionId);
+      if (sectionId === "admin-orders") {
+        await renderAdminOrders();
+      }
+    });
+  });
+
+  window.addEventListener("hashchange", () => {
+    showAdminSection((window.location.hash || "#admin-products").replace("#", ""));
+  });
+
+  await renderAdminDashboard();
 }
 
 function handleCheckout() {
@@ -1915,7 +2230,33 @@ function handleCheckout() {
     submitButton.textContent = "Processing...";
 
     try {
-      const total = await calculateCartTotal();
+      const products = await getProducts();
+      const cart = await getCart();
+      if (cart.length === 0) {
+        throw new Error("Your cart is empty.");
+      }
+
+      const unavailable = await validateCartStock(cart, products);
+      if (unavailable.length > 0) {
+        throw new Error(unavailable.map((item) => `${item.product.name} has ${item.stock} available`).join(". "));
+      }
+
+      const orderItems = cart
+        .map((cartItem) => {
+          const product = products.find((item) => item.id === cartItem.id);
+          if (!product) return null;
+          return {
+            productId: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: cartItem.quantity,
+            lineTotal: product.price * cartItem.quantity
+          };
+        })
+        .filter(Boolean);
+      const subtotal = orderItems.reduce((total, item) => total + item.lineTotal, 0);
+      const shippingAmount = subtotal >= 45 ? 0 : 0;
+      const total = subtotal + shippingAmount;
       const amountInCents = Math.round(total * 100);
 
       const response = await fetch("/create-payment-intent", {
@@ -1931,7 +2272,7 @@ function handleCheckout() {
         throw new Error(error);
       }
 
-      const { error: confirmError } = await stripe.confirmCardPayment(clientSecret, {
+      const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: cardElement
         }
@@ -1941,11 +2282,24 @@ function handleCheckout() {
         throw new Error(confirmError.message);
       }
 
+      await saveOrder({
+        id: createId("order"),
+        customerName: document.getElementById("name").value.trim(),
+        customerEmail: document.getElementById("email").value.trim(),
+        shippingAddress: document.getElementById("address").value.trim(),
+        items: orderItems,
+        subtotal,
+        shippingAmount,
+        total,
+        paymentIntentId: paymentIntent ? paymentIntent.id : "",
+        status: "paid"
+      });
+      await decrementStockForOrder(orderItems);
       await clearCart();
-      alert("Thank you! Your payment was successful.");
+      await showPageAlert("Thank you! Your payment was successful.", "Payment Successful");
       window.location.href = "index.html";
     } catch (error) {
-      alert(`Payment failed: ${error.message}`);
+      await showPageAlert(`Payment failed: ${error.message}`, "Payment Failed");
       submitButton.disabled = false;
       submitButton.textContent = "Complete Payment";
     }
@@ -1971,6 +2325,6 @@ async function initPage() {
 window.addEventListener("DOMContentLoaded", () => {
   initPage().catch((error) => {
     console.error(error);
-    alert("There was a problem loading the shop data. Check your Supabase setup and try again.");
+    showPageAlert("There was a problem loading the shop data. Check your Supabase setup and try again.", "Shop Data Error");
   });
 });

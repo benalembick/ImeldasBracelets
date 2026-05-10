@@ -738,6 +738,13 @@ h3 {
   font-weight: 850;
 }
 
+.admin-menu a.is-active,
+.admin-menu a[aria-current="page"] {
+  border-color: var(--sea-dark);
+  color: #ffffff;
+  background: var(--sea-dark);
+}
+
 .admin-form-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -776,6 +783,15 @@ h3 {
   background: #f2fcfd;
   font-size: 0.76rem;
   font-weight: 900;
+}
+
+.stock-note {
+  color: var(--sea-dark);
+  font-weight: 900;
+}
+
+.stock-note.is-empty {
+  color: var(--coral);
 }
 
 .page-heading {
@@ -921,6 +937,11 @@ h3 {
   padding: 0.58rem 0.9rem;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .checkout-form,
 #checkout-form,
 .checkout-form form {
@@ -955,6 +976,55 @@ h3 {
 .quick-view.is-open {
   display: grid;
   place-items: center;
+}
+
+.page-alert {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: none;
+  place-items: center;
+  padding: 1rem;
+}
+
+.page-alert.is-open {
+  display: grid;
+}
+
+.page-alert-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(22, 42, 47, 0.45);
+}
+
+.page-alert-panel {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 100%);
+  display: grid;
+  gap: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.2rem;
+  background: #ffffff;
+  box-shadow: var(--shadow-hover);
+}
+
+.page-alert-panel h2,
+.page-alert-panel p {
+  margin: 0;
+}
+
+.page-alert-panel h2 {
+  font-size: 1.25rem;
+}
+
+.page-alert-panel p {
+  color: var(--muted);
+}
+
+.page-alert-panel .button {
+  justify-self: start;
 }
 
 .quick-view-backdrop {
@@ -1383,6 +1453,28 @@ h3 {
   align-items: start;
 }
 
+.admin-section[hidden] {
+  display: none !important;
+}
+
+#admin-products {
+  height: calc(100vh - 13rem);
+  min-height: 520px;
+  overflow: hidden;
+}
+
+#admin-products > .admin-form,
+#admin-products > .admin-list {
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+#admin-products > .admin-form {
+  position: static;
+}
+
 .admin-form {
   position: sticky;
   top: 8rem;
@@ -1408,6 +1500,16 @@ h3 {
   gap: 1rem;
   align-items: center;
   padding: 1rem;
+}
+
+.admin-order-item {
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+.admin-order-item .admin-item-content {
+  display: grid;
+  gap: 0.35rem;
 }
 
 .admin-users-section {
@@ -1568,6 +1670,18 @@ h3 {
     border-radius: 0;
     border-left: 0;
     border-right: 0;
+  }
+
+  #admin-products {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  #admin-products > .admin-form,
+  #admin-products > .admin-list {
+    max-height: none;
+    overflow: visible;
   }
 
   .admin-form-row {

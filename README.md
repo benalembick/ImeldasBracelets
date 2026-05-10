@@ -9,7 +9,7 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
 - `product.html` - single product detail page.
 - `cart.html` - shopping cart page backed by Supabase.
 - `checkout.html` - checkout form with Stripe payment integration.
-- `admin.html` - admin tools for products, slideshow images, and admin users.
+- `admin.html` - admin tools for products, stock, orders, slideshow images, and admin users.
 - `styles.css` - responsive styling.
 - `script.js` - product rendering, cart logic, Supabase persistence, and Stripe payment handling.
 - `server.js` - Express server for static files, Supabase config, and Stripe payment intents.
@@ -37,7 +37,8 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
      category text not null default 'bracelets',
      badge text not null default 'Handmade',
      rating numeric not null default 4.8,
-     sort_rank integer not null default 20
+     sort_rank integer not null default 20,
+     stock_quantity integer not null default 12 check (stock_quantity >= 0)
    );
 
    create table if not exists admin_users (
@@ -56,6 +57,20 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
      quantity integer not null check (quantity > 0),
      primary key (cart_id, product_id)
    );
+
+   create table if not exists orders (
+     id text primary key,
+     created_at timestamptz not null default now(),
+     customer_name text not null,
+     customer_email text not null,
+     shipping_address text not null,
+     items jsonb not null,
+     subtotal numeric not null,
+     shipping_amount numeric not null default 0,
+     total numeric not null,
+     payment_intent_id text,
+     status text not null default 'paid'
+   );
    ```
 
    If you already created the `products` table before this update, run this migration:
@@ -69,6 +84,21 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
    alter table products add column if not exists badge text not null default 'Handmade';
    alter table products add column if not exists rating numeric not null default 4.8;
    alter table products add column if not exists sort_rank integer not null default 20;
+   alter table products add column if not exists stock_quantity integer not null default 12 check (stock_quantity >= 0);
+
+   create table if not exists orders (
+     id text primary key,
+     created_at timestamptz not null default now(),
+     customer_name text not null,
+     customer_email text not null,
+     shipping_address text not null,
+     items jsonb not null,
+     subtotal numeric not null,
+     shipping_amount numeric not null default 0,
+     total numeric not null,
+     payment_intent_id text,
+     status text not null default 'paid'
+   );
    ```
 
 3. Create a local `.env` file from `.env.example`, then add your real keys:
@@ -95,7 +125,7 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
 
 ## Notes
 
-- Products, slideshow settings, admin users, and carts are stored in Supabase.
+- Products, stock quantities, slideshow settings, admin users, carts, and orders are stored in Supabase.
 - The cart uses a browser cookie as an anonymous cart id.
 - `.env` is ignored by git so your real keys stay local.
 - The default admin login is `admin` / `admin123`; change it from the admin page after first login.

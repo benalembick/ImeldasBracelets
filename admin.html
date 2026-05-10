@@ -31,7 +31,7 @@
       <section class="page-heading">
         <p class="eyebrow">Admin</p>
         <h1>Admin login</h1>
-        <p class="section-copy">Sign in to manage bracelets and admin users.</p>
+        <p class="section-copy">Sign in to manage bracelets, stock, orders, and admin users.</p>
       </section>
       <form id="admin-login-form" class="checkout-form admin-login-form">
         <label for="admin-login-username">Username</label>
@@ -46,18 +46,19 @@
     <section id="admin-dashboard" hidden>
       <section class="page-heading">
         <p class="eyebrow">Admin</p>
-        <h1>Manage bracelets and access</h1>
+        <h1>Manage shop admin</h1>
         <p class="section-copy">Signed in as <strong id="admin-current-user"></strong>.</p>
         <button class="button" id="admin-logout" type="button">Log Out</button>
       </section>
 
       <nav class="admin-menu" aria-label="Admin sections">
-        <a href="#admin-products">Products</a>
-        <a href="#admin-slideshow">Homepage Slideshow</a>
-        <a href="#admin-users">Admin Users</a>
+        <a href="#admin-products" data-admin-section-link>Products</a>
+        <a href="#admin-orders" data-admin-section-link>Orders</a>
+        <a href="#admin-slideshow" data-admin-section-link>Homepage Slideshow</a>
+        <a href="#admin-users" data-admin-section-link>Admin Users</a>
       </nav>
 
-      <section class="admin-grid" id="admin-products">
+      <section class="admin-section admin-grid" id="admin-products" data-admin-section>
         <form id="admin-form" class="checkout-form admin-form">
           <input id="product-id" name="productId" type="hidden" />
 
@@ -66,6 +67,9 @@
 
           <label for="product-price">Price (USD)</label>
           <input id="product-price" name="price" type="number" min="0.01" step="0.01" required />
+
+          <label for="product-stock">Stock available</label>
+          <input id="product-stock" name="stock" type="number" min="0" step="1" required />
 
           <label for="product-image">Image URL</label>
           <input id="product-image" name="image" type="url" required />
@@ -127,7 +131,15 @@
         <div id="admin-product-list" class="admin-list"></div>
       </section>
 
-      <section class="admin-users-section" id="admin-slideshow">
+      <section class="admin-section admin-users-section" id="admin-orders" data-admin-section hidden>
+        <div class="section-heading">
+          <p class="eyebrow">Orders</p>
+          <h2>Placed Orders</h2>
+        </div>
+        <div id="admin-order-list" class="admin-list"></div>
+      </section>
+
+      <section class="admin-section admin-users-section" id="admin-slideshow" data-admin-section hidden>
         <div class="section-heading">
           <p class="eyebrow">Homepage slideshow</p>
           <h2>Manage Hero Images</h2>
@@ -160,7 +172,7 @@
         </div>
       </section>
 
-      <section class="admin-users-section" id="admin-users">
+      <section class="admin-section admin-users-section" id="admin-users" data-admin-section hidden>
         <div class="section-heading">
           <p class="eyebrow">Admin users</p>
           <h2>Manage Admin Users</h2>
