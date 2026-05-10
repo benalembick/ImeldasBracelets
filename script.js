@@ -262,8 +262,15 @@ let productMetadataColumnsAvailable = true;
 let productHoverImageColumnAvailable = true;
 let productStockColumnAvailable = true;
 let productCategoryColumnsAvailable = true;
+let productVisibilityColumnAvailable = true;
 let categoriesTableAvailable = true;
 let productCategoryLinksAvailable = true;
+const adminProductState = {
+  search: "",
+  category: "all",
+  type: "all",
+  sort: "newest"
+};
 let ordersTableAvailable = true;
 
 const defaultSlideshow = {
@@ -506,7 +513,8 @@ function normalizeProducts(products) {
         badge: product.badge || fallback.badge || (index % 3 === 0 ? "New" : "Handmade"),
         rating: Number.isFinite(rating) ? rating : 4.8,
         sortRank: Number.isFinite(sortRank) ? sortRank : index + 20,
-        stock: Math.max(0, Math.floor(Number(product.stock_quantity ?? product.stock ?? 12) || 0))
+        stock: Math.max(0, Math.floor(Number(product.stock_quantity ?? product.stock ?? 12) || 0)),
+        isVisible: product.is_visible ?? product.isVisible ?? true
       };
     });
 }
@@ -538,6 +546,10 @@ function toProductRow(product, includeHoverImage = true) {
 
   if (productStockColumnAvailable) {
     row.stock_quantity = Math.max(0, Math.floor(Number(product.stock) || 0));
+  }
+
+  if (productVisibilityColumnAvailable) {
+    row.is_visible = product.isVisible !== false;
   }
 
   return row;
@@ -587,6 +599,10 @@ function toBaseProductRow(product) {
     row.stock_quantity = Math.max(0, Math.floor(Number(product.stock) || 0));
   }
 
+  if (productVisibilityColumnAvailable) {
+    row.is_visible = product.isVisible !== false;
+  }
+
   return row;
 }
 
@@ -621,6 +637,12 @@ async function saveProducts(products) {
   const { error } = await db.from("products").upsert(rows, { onConflict: "id" });
   if (!error) {
     return saveProductCategoryLinks(normalizedProducts);
+  }
+
+  if (productVisibilityColumnAvailable) {
+    productVisibilityColumnAvailable = false;
+    console.warn("Product visibility column is not available yet. Run the README Supabase migration to persist hidden products.");
+    return saveProducts(normalizedProducts);
   }
 
   if (productCategoryColumnsAvailable) {
@@ -739,10 +761,15 @@ async function getProducts() {
   if (!db) return normalizeProducts(defaultProducts);
 
   const productColumns = productMetadataColumnsAvailable
-    ? `id,name,price,image,${productHoverImageColumnAvailable ? "hover_image," : ""}description,color,type,beaded,charm,category${productCategoryColumnsAvailable ? ",category_id" : ""},badge,rating,sort_rank${productStockColumnAvailable ? ",stock_quantity" : ""}`
-    : `id,name,price,image,${productHoverImageColumnAvailable ? "hover_image," : ""}description${productStockColumnAvailable ? ",stock_quantity" : ""}`;
+    ? `id,name,price,image,${productHoverImageColumnAvailable ? "hover_image," : ""}description,color,type,beaded,charm,category${productCategoryColumnsAvailable ? ",category_id" : ""},badge,rating,sort_rank${productStockColumnAvailable ? ",stock_quantity" : ""}${productVisibilityColumnAvailable ? ",is_visible" : ""}`
+    : `id,name,price,image,${productHoverImageColumnAvailable ? "hover_image," : ""}description${productStockColumnAvailable ? ",stock_quantity" : ""}${productVisibilityColumnAvailable ? ",is_visible" : ""}`;
   const { data, error } = await db.from("products").select(productColumns);
   if (error) {
+    if (productVisibilityColumnAvailable) {
+      productVisibilityColumnAvailable = false;
+      return getProducts();
+    }
+
     if (productCategoryColumnsAvailable) {
       productCategoryColumnsAvailable = false;
       return getProducts();
@@ -1298,6 +1325,8 @@ function getCategorySearchText(product) {
 }
 
 function productMatchesCollection(product) {
+  if (product.isVisible === false) return false;
+
   const { meta } = product;
   const search = collectionState.search.trim().toLowerCase();
   const categoryIds = getProductCategoryIds(product);
@@ -2414,7 +2443,8 @@ async function upsertProduct(event) {
     categoryIds,
     badge,
     rating: existingProduct ? existingMeta.rating : 4.8,
-    sortRank: existingProduct ? existingMeta.sortRank : products.length + 20
+    sortRank: existingProduct ? existingMeta.sortRank : products.length + 20,
+    isVisible: existingProduct ? existingProduct.isVisible !== false : true
   };
   const index = products.findIndex((item) => item.id === id);
 
@@ -2582,39 +2612,203 @@ async function deleteProduct(productId) {
   await renderAdminProducts();
 }
 
+function updateAdminProductStateFromControls() {
+  const searchInput = document.getElementById("admin-product-search");
+  const categoryInput = document.getElementById("admin-category-filter");
+  const typeInput = document.getElementById("admin-type-filter");
+  const sortInput = document.getElementById("admin-product-sort");
+
+  adminProductState.search = searchInput ? searchInput.value.trim().toLowerCase() : "";
+  adminProductState.category = categoryInput ? categoryInput.value : "all";
+  adminProductState.type = typeInput ? typeInput.value : "all";
+  adminProductState.sort = sortInput ? sortInput.value : "newest";
+}
+
+function filterAdminProducts(products) {
+  const search = adminProductState.search;
+  return products.filter((product) => {
+    const meta = product.meta || getProductMeta(product);
+    const categoryIds = getProductCategoryIds(product);
+    const searchText = [
+      product.name,
+      product.description,
+      product.id,
+      meta.badge,
+      meta.color,
+      meta.type,
+      getCategorySearchText(product)
+    ].join(" ").toLowerCase();
+
+    const matchesSearch = !search || searchText.includes(search);
+    const matchesCategory = adminProductState.category === "all" || categoryIds.includes(adminProductState.category);
+    const matchesType = adminProductState.type === "all" || meta.type === adminProductState.type;
+    return matchesSearch && matchesCategory && matchesType;
+  });
+}
+
+function sortAdminProducts(products) {
+  return [...products].sort((a, b) => {
+    if (adminProductState.sort === "alpha") return a.name.localeCompare(b.name);
+    if (adminProductState.sort === "stock-low") return a.stock - b.stock || a.name.localeCompare(b.name);
+    if (adminProductState.sort === "stock-high") return b.stock - a.stock || a.name.localeCompare(b.name);
+    return b.meta.sortRank - a.meta.sortRank || a.name.localeCompare(b.name);
+  });
+}
+
+async function populateAdminProductToolbar(categories = null) {
+  const categoryFilter = document.getElementById("admin-category-filter");
+  if (!categoryFilter) return;
+
+  const currentValue = categoryFilter.value || adminProductState.category;
+  const sourceCategories = categories || await getCategories({ includeInactive: true });
+  categoryFilter.innerHTML = [
+    optionMarkup("all", "All categories"),
+    ...sourceCategories.map((category) => optionMarkup(category.id, category.name))
+  ].join("");
+  categoryFilter.value = sourceCategories.some((category) => category.id === currentValue) ? currentValue : "all";
+  adminProductState.category = categoryFilter.value;
+}
+
+async function duplicateProduct(productId) {
+  const products = await getProducts();
+  const source = products.find((product) => product.id === productId);
+  if (!source) return;
+
+  const baseName = `${source.name} Copy`;
+  const nextProduct = {
+    ...source,
+    id: `${slugify(baseName) || "product-copy"}-${Date.now()}`,
+    name: baseName,
+    sortRank: products.length + 20,
+    isVisible: false
+  };
+
+  await saveProducts([...products, nextProduct]);
+  await renderAdminProducts();
+  await editProduct(nextProduct.id);
+}
+
+async function toggleProductVisibility(productId) {
+  const products = await getProducts();
+  const nextProducts = products.map((product) => (
+    product.id === productId
+      ? { ...product, isVisible: product.isVisible === false }
+      : product
+  ));
+  const hadVisibilityColumn = productVisibilityColumnAvailable;
+  await saveProducts(nextProducts);
+  await renderAdminProducts();
+
+  if (hadVisibilityColumn && !productVisibilityColumnAvailable) {
+    await showPageAlert("Visibility was changed in the interface, but your products table needs an is_visible column before that setting can persist in Supabase.");
+  }
+}
+
+async function updateProductInline(productId, field, rawValue) {
+  const products = await getProducts();
+  const product = products.find((item) => item.id === productId);
+  if (!product) return;
+
+  const value = field === "price"
+    ? Number(rawValue)
+    : Math.max(0, Math.floor(Number(rawValue)));
+
+  if (!Number.isFinite(value) || (field === "price" && value <= 0)) {
+    await showPageAlert("Enter a valid price or stock value.");
+    await renderAdminProducts();
+    return;
+  }
+
+  const nextProducts = products.map((item) => (
+    item.id === productId ? { ...item, [field]: value } : item
+  ));
+  await saveProducts(nextProducts);
+  await renderAdminProducts();
+}
+
 async function renderAdminProducts() {
   const list = document.getElementById("admin-product-list");
   if (!list) return;
 
   list.innerHTML = "";
-  await populateAdminProductCategoryFields();
+  const categories = await getCategories({ includeInactive: true });
+  buildCategoryMaps(categories);
+  const productCategoryInput = document.getElementById("product-category");
+  if (productCategoryInput && productCategoryInput.options.length === 0) {
+    await populateAdminProductCategoryFields();
+  }
+  await populateAdminProductToolbar(categories);
+  updateAdminProductStateFromControls();
 
-  (await getProducts()).map(getProductWithMeta).forEach((product) => {
+  const products = (await getProducts()).map(getProductWithMeta);
+  const filteredProducts = sortAdminProducts(filterAdminProducts(products));
+  const count = document.getElementById("admin-product-count");
+  if (count) {
+    count.textContent = `${filteredProducts.length} of ${products.length} ${products.length === 1 ? "product" : "products"}`;
+  }
+
+  if (filteredProducts.length === 0) {
+    list.innerHTML = `
+      <article class="admin-empty-state">
+        <h3>No products match</h3>
+        <p>Adjust search, category, type, or sort controls.</p>
+      </article>
+    `;
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  filteredProducts.forEach((product) => {
     const item = document.createElement("article");
-    item.className = "admin-item";
+    item.className = `admin-item admin-product-row${product.isVisible === false ? " is-hidden-product" : ""}`;
     item.innerHTML = `
       <div class="admin-product-images">
-        <img src="${product.image}" alt="${product.name}" />
-        ${product.hoverImage ? `<img src="${product.hoverImage}" alt="" aria-hidden="true" />` : ""}
+        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" />
+        ${product.hoverImage ? `<img src="${escapeHtml(product.hoverImage)}" alt="" aria-hidden="true" />` : ""}
       </div>
       <div class="admin-item-content">
-        <h3>${product.name}</h3>
-        <p>${product.description}</p>
+        <div class="admin-product-title-row">
+          <h3>${escapeHtml(product.name)}</h3>
+          <span class="admin-status-pill ${product.isVisible === false ? "is-muted" : ""}">${product.isVisible === false ? "Hidden" : "Visible"}</span>
+        </div>
+        <p>${escapeHtml(product.description)}</p>
         ${createProductMetaChips(product.meta)}
-        ${product.hoverImage ? `<p>Hover image set</p>` : ""}
-        <p class="stock-note ${product.stock > 0 ? "" : "is-empty"}">${getStockLabel(product)}</p>
-        <p class="price">${formatPrice(product.price)}</p>
+        <div class="admin-inline-fields">
+          <label>
+            <span>Price</span>
+            <input type="number" min="0.01" step="0.01" value="${Number(product.price).toFixed(2)}" data-inline-field="price" data-id="${escapeHtml(product.id)}" />
+          </label>
+          <label>
+            <span>Stock</span>
+            <input type="number" min="0" step="1" value="${Math.max(0, Math.floor(Number(product.stock) || 0))}" data-inline-field="stock" data-id="${escapeHtml(product.id)}" />
+          </label>
+          <span class="stock-note ${product.stock > 0 ? "" : "is-empty"}">${getStockLabel(product)}</span>
+        </div>
       </div>
       <div class="admin-item-actions">
-        <button class="add-button" data-action="edit" data-id="${product.id}">Edit</button>
-        <button class="remove-button" data-action="delete" data-id="${product.id}">Delete</button>
+        <button class="add-button" data-action="edit" data-id="${escapeHtml(product.id)}">Edit</button>
+        <button class="add-button" data-action="duplicate" data-id="${escapeHtml(product.id)}">Duplicate</button>
+        <button class="add-button" data-action="visibility" data-id="${escapeHtml(product.id)}">${product.isVisible === false ? "Show" : "Hide"}</button>
+        <button class="remove-button" data-action="delete" data-id="${escapeHtml(product.id)}">Delete</button>
       </div>
     `;
 
     item.querySelector('[data-action="edit"]').addEventListener("click", () => editProduct(product.id));
+    item.querySelector('[data-action="duplicate"]').addEventListener("click", () => duplicateProduct(product.id));
+    item.querySelector('[data-action="visibility"]').addEventListener("click", () => toggleProductVisibility(product.id));
     item.querySelector('[data-action="delete"]').addEventListener("click", () => deleteProduct(product.id));
-    list.appendChild(item);
+    item.querySelectorAll("[data-inline-field]").forEach((input) => {
+      input.addEventListener("change", () => updateProductInline(product.id, input.dataset.inlineField, input.value));
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          input.blur();
+        }
+      });
+    });
+    fragment.appendChild(item);
   });
+  list.appendChild(fragment);
 }
 
 async function renderAdminCategories() {
@@ -3042,6 +3236,14 @@ async function setupAdminPage() {
       populateAdminProductCategoryFields(productCategoryInput.value, []);
     });
   }
+
+  ["admin-product-search", "admin-category-filter", "admin-type-filter", "admin-product-sort"].forEach((controlId) => {
+    const control = document.getElementById(controlId);
+    if (control) {
+      control.addEventListener("input", renderAdminProducts);
+      control.addEventListener("change", renderAdminProducts);
+    }
+  });
 
   const slideshowSettingsForm = document.getElementById("admin-slideshow-settings-form");
   if (slideshowSettingsForm) {

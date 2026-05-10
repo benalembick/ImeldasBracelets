@@ -46,7 +46,8 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
      badge text not null default 'Handmade',
      rating numeric not null default 4.8,
      sort_rank integer not null default 20,
-     stock_quantity integer not null default 12 check (stock_quantity >= 0)
+     stock_quantity integer not null default 12 check (stock_quantity >= 0),
+     is_visible boolean not null default true
    );
 
    create table if not exists categories (
@@ -132,6 +133,7 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
    alter table products add column if not exists rating numeric not null default 4.8;
    alter table products add column if not exists sort_rank integer not null default 20;
    alter table products add column if not exists stock_quantity integer not null default 12 check (stock_quantity >= 0);
+   alter table products add column if not exists is_visible boolean not null default true;
 
    create table if not exists categories (
      id text primary key,
