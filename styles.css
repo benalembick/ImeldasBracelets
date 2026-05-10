@@ -1755,7 +1755,7 @@ button:disabled {
     padding: 0.7rem 0;
   }
 
-  .brand-logo {
+  .site-header .brand-logo {
     width: clamp(20rem, 62vw, 24.5rem);
     max-height: 6.65rem;
   }
@@ -1781,9 +1781,15 @@ button:disabled {
     padding: 0.45rem 0 0.55rem;
   }
 
-  .brand-logo {
-    width: clamp(19rem, 64vw, 22rem);
-    max-height: 6.35rem;
+  .brand {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .site-header .brand-logo {
+    width: min(74vw, 18rem);
+    max-height: 5.8rem;
+    margin-left: 0;
   }
 
   .header-icons {
@@ -1979,8 +1985,9 @@ button:disabled {
 }
 
 @media (max-width: 480px) {
-  .brand-logo {
-    width: clamp(17.25rem, 86vw, 21rem);
-    max-height: 6rem;
+  .site-header .brand-logo {
+    width: min(72vw, 17rem);
+    max-height: 5.2rem;
+    margin-left: 0;
   }
 }
