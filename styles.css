@@ -107,7 +107,7 @@ textarea {
   transform: translateY(-1px);
 }
 
-.brand-logo {
+.site-header .brand-logo {
   width: clamp(19rem, 31vw, 27rem);
   height: auto;
   max-height: 7.1rem;
