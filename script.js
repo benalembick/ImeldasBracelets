@@ -241,6 +241,16 @@ const defaultProducts = [
   }
 ];
 
+const defaultCategories = [
+  { id: "bracelets", name: "Bracelets", slug: "bracelets", parentId: null, isActive: true, sortOrder: 10 },
+  { id: "friendship-bracelets", name: "Friendship Bracelets", slug: "friendship-bracelets", parentId: "bracelets", isActive: true, sortOrder: 10 },
+  { id: "paracord-survival-bracelets", name: "Paracord Survival Bracelets", slug: "paracord-survival-bracelets", parentId: "bracelets", isActive: true, sortOrder: 20 },
+  { id: "gifts", name: "Gifts", slug: "gifts", parentId: null, isActive: true, sortOrder: 20 },
+  { id: "winter-gifts", name: "Winter Gifts", slug: "winter-gifts", parentId: "gifts", isActive: true, sortOrder: 10 },
+  { id: "general-gifts", name: "General Gifts", slug: "general-gifts", parentId: "gifts", isActive: true, sortOrder: 20 },
+  { id: "resin-products", name: "Resin Products", slug: "resin-products", parentId: null, isActive: true, sortOrder: 30 }
+];
+
 const cartCookieName = "imeldasBraceletsCartId";
 const adminSessionCookieName = "imeldasBraceletsAdminSession";
 const slideshowSettingKey = "hero_slideshow";
@@ -251,6 +261,9 @@ let warnedAboutSupabase = false;
 let productMetadataColumnsAvailable = true;
 let productHoverImageColumnAvailable = true;
 let productStockColumnAvailable = true;
+let productCategoryColumnsAvailable = true;
+let categoriesTableAvailable = true;
+let productCategoryLinksAvailable = true;
 let ordersTableAvailable = true;
 
 const defaultSlideshow = {
@@ -484,6 +497,12 @@ function normalizeProducts(products) {
         beaded: typeof product.beaded === "boolean" ? product.beaded : true,
         charm: typeof product.charm === "boolean" ? product.charm : (fallback.style || "") === "charm",
         category: product.category || fallback.category || "bracelets",
+        categoryId: product.category_id || product.categoryId || product.category || fallback.category || "bracelets",
+        categoryIds: Array.isArray(product.categoryIds)
+          ? product.categoryIds.filter(Boolean)
+          : Array.isArray(product.category_ids)
+            ? product.category_ids.filter(Boolean)
+            : [],
         badge: product.badge || fallback.badge || (index % 3 === 0 ? "New" : "Handmade"),
         rating: Number.isFinite(rating) ? rating : 4.8,
         sortRank: Number.isFinite(sortRank) ? sortRank : index + 20,
@@ -509,6 +528,10 @@ function toProductRow(product, includeHoverImage = true) {
     sort_rank: Number(product.sortRank)
   };
 
+  if (productCategoryColumnsAvailable) {
+    row.category_id = product.categoryId || product.category || "bracelets";
+  }
+
   if (includeHoverImage) {
     row.hover_image = product.hoverImage || null;
   }
@@ -518,6 +541,37 @@ function toProductRow(product, includeHoverImage = true) {
   }
 
   return row;
+}
+
+function normalizeCategories(categories) {
+  const source = Array.isArray(categories) && categories.length > 0 ? categories : defaultCategories;
+  return source
+    .filter((category) => category && category.name)
+    .map((category, index) => {
+      const slug = category.slug || slugify(category.name);
+      return {
+        id: category.id || slug,
+        name: category.name,
+        slug,
+        parentId: category.parent_id ?? category.parentId ?? null,
+        isActive: category.is_active ?? category.isActive ?? true,
+        sortOrder: Number(category.sort_order ?? category.sortOrder ?? index * 10)
+      };
+    })
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+}
+
+function toCategoryRow(category) {
+  const now = new Date().toISOString();
+  return {
+    id: category.id || category.slug,
+    name: category.name,
+    slug: category.slug,
+    parent_id: category.parentId || null,
+    is_active: Boolean(category.isActive),
+    sort_order: Number(category.sortOrder) || 0,
+    updated_at: now
+  };
 }
 
 function toBaseProductRow(product) {
@@ -560,12 +614,20 @@ function clearAdminSession() {
 
 async function saveProducts(products) {
   const db = await getDb();
-  if (!db) return;
+  if (!db) return true;
 
   const normalizedProducts = normalizeProducts(products);
   const rows = normalizedProducts.map((product) => toProductRow(product, productHoverImageColumnAvailable));
   const { error } = await db.from("products").upsert(rows, { onConflict: "id" });
-  if (!error) return;
+  if (!error) {
+    return saveProductCategoryLinks(normalizedProducts);
+  }
+
+  if (productCategoryColumnsAvailable) {
+    productCategoryColumnsAvailable = false;
+    console.warn("Product category_id column is not available yet. Run the README Supabase migration to persist category assignments.");
+    return saveProducts(normalizedProducts);
+  }
 
   if (productStockColumnAvailable) {
     productStockColumnAvailable = false;
@@ -579,7 +641,7 @@ async function saveProducts(products) {
 
     const rowsWithoutHoverImage = normalizedProducts.map((product) => toProductRow(product, false));
     const { error: retryError } = await db.from("products").upsert(rowsWithoutHoverImage, { onConflict: "id" });
-    if (!retryError) return;
+    if (!retryError) return saveProductCategoryLinks(normalizedProducts);
   }
 
   if (productMetadataColumnsAvailable) {
@@ -589,19 +651,87 @@ async function saveProducts(products) {
 
   const fallbackRows = normalizedProducts.map(toBaseProductRow);
   const { error: fallbackError } = await db.from("products").upsert(fallbackRows, { onConflict: "id" });
-  if (!fallbackError) return;
+  if (!fallbackError) return saveProductCategoryLinks(normalizedProducts);
 
   const minimalRows = normalizedProducts.map(toMinimalProductRow);
   const { error: minimalError } = await db.from("products").upsert(minimalRows, { onConflict: "id" });
   if (minimalError) throw minimalError;
+
+  return saveProductCategoryLinks(normalizedProducts);
 }
 
 async function deleteProductRecord(productId) {
   const db = await getDb();
   if (!db) return;
 
+  if (productCategoryLinksAvailable) {
+    const { error: linkError } = await db.from("product_categories").delete().eq("product_id", productId);
+    if (linkError) {
+      productCategoryLinksAvailable = false;
+      console.warn("Product category links table is not available yet. Run the README Supabase migration to enable subcategory links.");
+    }
+  }
+
   const { error } = await db.from("products").delete().eq("id", productId);
   if (error) throw error;
+}
+
+async function saveProductCategoryLinks(products) {
+  const db = await getDb();
+  if (!db) return true;
+  if (!productCategoryLinksAvailable) return products.every((product) => (product.categoryIds || []).length === 0);
+
+  const productIds = products.map((product) => product.id).filter(Boolean);
+  if (productIds.length === 0) return true;
+
+  const validCategoryIds = new Set((await getCategories({ includeInactive: true })).map((category) => category.id));
+  const rows = products.flatMap((product) => {
+    const categoryIds = Array.from(new Set([product.categoryId, ...(product.categoryIds || [])].filter((categoryId) => validCategoryIds.has(categoryId))));
+    return categoryIds.map((categoryId) => ({
+      product_id: product.id,
+      category_id: categoryId
+    }));
+  });
+
+  const { error: deleteError } = await db.from("product_categories").delete().in("product_id", productIds);
+  if (deleteError) {
+    productCategoryLinksAvailable = false;
+    console.warn("Product category links table is not available yet. Run the README Supabase migration to enable subcategory links.");
+    return products.every((product) => (product.categoryIds || []).length === 0);
+  }
+
+  if (rows.length > 0) {
+    const { error } = await db.from("product_categories").insert(rows);
+    if (error) {
+      productCategoryLinksAvailable = false;
+      console.warn("Product category links could not be saved. Check the product_categories migration.");
+      return products.every((product) => (product.categoryIds || []).length === 0);
+    }
+  }
+
+  return true;
+}
+
+async function getProductCategoryLinks(productIds = []) {
+  const db = await getDb();
+  if (!db || !productCategoryLinksAvailable || productIds.length === 0) return {};
+
+  const { data, error } = await db
+    .from("product_categories")
+    .select("product_id,category_id")
+    .in("product_id", productIds);
+
+  if (error) {
+    productCategoryLinksAvailable = false;
+    console.warn("Product category links table is not available yet. Run the README Supabase migration to enable subcategory links.");
+    return {};
+  }
+
+  return (data || []).reduce((groups, row) => {
+    if (!groups[row.product_id]) groups[row.product_id] = [];
+    groups[row.product_id].push(row.category_id);
+    return groups;
+  }, {});
 }
 
 async function getProducts() {
@@ -609,10 +739,15 @@ async function getProducts() {
   if (!db) return normalizeProducts(defaultProducts);
 
   const productColumns = productMetadataColumnsAvailable
-    ? `id,name,price,image,${productHoverImageColumnAvailable ? "hover_image," : ""}description,color,type,beaded,charm,category,badge,rating,sort_rank${productStockColumnAvailable ? ",stock_quantity" : ""}`
+    ? `id,name,price,image,${productHoverImageColumnAvailable ? "hover_image," : ""}description,color,type,beaded,charm,category${productCategoryColumnsAvailable ? ",category_id" : ""},badge,rating,sort_rank${productStockColumnAvailable ? ",stock_quantity" : ""}`
     : `id,name,price,image,${productHoverImageColumnAvailable ? "hover_image," : ""}description${productStockColumnAvailable ? ",stock_quantity" : ""}`;
   const { data, error } = await db.from("products").select(productColumns);
   if (error) {
+    if (productCategoryColumnsAvailable) {
+      productCategoryColumnsAvailable = false;
+      return getProducts();
+    }
+
     if (productStockColumnAvailable) {
       productStockColumnAvailable = false;
       return getProducts();
@@ -631,8 +766,84 @@ async function getProducts() {
     return normalizeProducts(defaultProducts);
   }
 
-  const products = normalizeProducts(data || []);
+  const linksByProduct = await getProductCategoryLinks((data || []).map((product) => product.id));
+  const products = normalizeProducts((data || []).map((product) => ({
+    ...product,
+    categoryIds: linksByProduct[product.id] || []
+  })));
   return products.length > 0 ? products : normalizeProducts(defaultProducts);
+}
+
+async function getCategories(options = {}) {
+  const db = await getDb();
+  if (!db || !categoriesTableAvailable) {
+    return normalizeCategories(defaultCategories).filter((category) => options.includeInactive || category.isActive);
+  }
+
+  const { data, error } = await db
+    .from("categories")
+    .select("id,name,slug,parent_id,is_active,sort_order")
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (error) {
+    categoriesTableAvailable = false;
+    console.warn("Categories table is not available yet. Run the README Supabase migration to manage categories in admin.");
+    return normalizeCategories(defaultCategories).filter((category) => options.includeInactive || category.isActive);
+  }
+
+  const categories = normalizeCategories(data || []);
+  return categories.filter((category) => options.includeInactive || category.isActive);
+}
+
+async function saveCategory(category) {
+  const db = await getDb();
+  if (!db || !categoriesTableAvailable) return;
+
+  const { error } = await db.from("categories").upsert(toCategoryRow(category), { onConflict: "id" });
+  if (error) throw error;
+}
+
+async function deleteCategoryRecord(categoryId) {
+  const db = await getDb();
+  if (!db || !categoriesTableAvailable) return;
+
+  const products = await getProducts();
+  const isUsed = products.some((product) => product.categoryId === categoryId || (product.categoryIds || []).includes(categoryId));
+  const hasChildren = (await getCategories({ includeInactive: true })).some((category) => category.parentId === categoryId);
+
+  if (isUsed || hasChildren) {
+    const { error } = await db.from("categories").update({ is_active: false, updated_at: new Date().toISOString() }).eq("id", categoryId);
+    if (error) throw error;
+    return "disabled";
+  }
+
+  if (productCategoryLinksAvailable) {
+    await db.from("product_categories").delete().eq("category_id", categoryId);
+  }
+
+  const { error } = await db.from("categories").delete().eq("id", categoryId);
+  if (error) throw error;
+  return "deleted";
+}
+
+async function ensureCategories() {
+  const db = await getDb();
+  if (!db || !categoriesTableAvailable) return;
+
+  const { data, error } = await db.from("categories").select("id");
+  if (error) {
+    categoriesTableAvailable = false;
+    console.warn("Categories table is not available yet. Run the README Supabase migration to enable category admin.");
+    return;
+  }
+
+  const existingIds = new Set((data || []).map((category) => category.id));
+  const missing = defaultCategories.filter((category) => !existingIds.has(category.id));
+  if (missing.length > 0) {
+    const { error: insertError } = await db.from("categories").upsert(missing.map(toCategoryRow), { onConflict: "id" });
+    if (insertError) throw insertError;
+  }
 }
 
 async function ensureProductCatalog() {
@@ -1022,7 +1233,10 @@ const productMerchandising = {
 };
 
 const collectionState = {
+  search: "",
   category: "all",
+  subcategory: "all",
+  availability: "all",
   color: "all",
   style: "all",
   type: "all",
@@ -1051,6 +1265,8 @@ function getProductMeta(product, index = 0) {
     beaded: typeof source.beaded === "boolean" ? source.beaded : true,
     charm: typeof source.charm === "boolean" ? source.charm : (fallback.style || "") === "charm",
     category: source.category || fallback.category || "bracelets",
+    categoryId: product.categoryId || product.category_id || source.category || fallback.category || "bracelets",
+    categoryIds: Array.isArray(product.categoryIds) ? product.categoryIds : [],
     rating: Number(source.rating ?? fallback.rating) || 4.8,
     sortRank: Number(source.sortRank ?? fallback.sortRank) || index + 20
   };
@@ -1067,12 +1283,43 @@ function getProductWithMeta(product, index) {
   return { ...product, meta: getProductMeta(product, index) };
 }
 
+function getProductCategoryIds(product) {
+  return Array.from(new Set([product.meta.categoryId, product.meta.category, ...(product.meta.categoryIds || [])].filter(Boolean)));
+}
+
+function getCategorySearchText(product) {
+  const names = [];
+  const categoryMap = window.imeldasCategoryMap || {};
+  getProductCategoryIds(product).forEach((categoryId) => {
+    const category = categoryMap[categoryId];
+    names.push(category ? `${category.name} ${category.slug}` : categoryId);
+  });
+  return names.join(" ");
+}
+
 function productMatchesCollection(product) {
   const { meta } = product;
+  const search = collectionState.search.trim().toLowerCase();
+  const categoryIds = getProductCategoryIds(product);
+  const searchText = [
+    product.name,
+    product.description,
+    meta.category,
+    meta.categoryId,
+    meta.type,
+    getLegacyStyle(meta),
+    getCategorySearchText(product)
+  ].join(" ").toLowerCase();
+  const matchesSearch = !search || searchText.includes(search);
   const matchesColor = collectionState.color === "all" || meta.color === collectionState.color;
   const matchesStyle = collectionState.style === "all" || getLegacyStyle(meta) === collectionState.style;
-  const matchesType = collectionState.type === "all" || meta.type === collectionState.type;
-  const matchesCategory = collectionState.category === "all" || meta.category === collectionState.category;
+  const matchesType = collectionState.type === "all" || meta.type === collectionState.type || categoryIds.includes(collectionState.type);
+  const matchesCategory = collectionState.category === "all" || categoryIds.includes(collectionState.category);
+  const matchesSubcategory = collectionState.subcategory === "all" || categoryIds.includes(collectionState.subcategory) || meta.type === collectionState.subcategory;
+  const matchesAvailability =
+    collectionState.availability === "all" ||
+    (collectionState.availability === "in-stock" && Number(product.stock) > 0) ||
+    (collectionState.availability === "sold-out" && Number(product.stock) <= 0);
   const matchesFeature =
     collectionState.feature === "all" ||
     (collectionState.feature === "beaded" && meta.beaded) ||
@@ -1082,9 +1329,9 @@ function productMatchesCollection(product) {
     (collectionState.price === "under-17" && product.price < 17) ||
     (collectionState.price === "17-20" && product.price >= 17 && product.price <= 20) ||
     (collectionState.price === "over-20" && product.price > 20) ||
-    (collectionState.price === "sale" && meta.category === "sale");
+    (collectionState.price === "sale" && (meta.category === "sale" || /save|sale/i.test(meta.badge)));
 
-  return matchesColor && matchesStyle && matchesType && matchesCategory && matchesFeature && matchesPrice;
+  return matchesSearch && matchesColor && matchesStyle && matchesType && matchesCategory && matchesSubcategory && matchesAvailability && matchesFeature && matchesPrice;
 }
 
 function sortCollectionProducts(products) {
@@ -1103,16 +1350,24 @@ function formatMetaLabel(value) {
 }
 
 function createProductMetaChips(meta) {
-  const chips = [formatMetaLabel(meta.color), formatMetaLabel(meta.type)];
+  const categoryMap = window.imeldasCategoryMap || {};
+  const chips = [
+    categoryMap[meta.categoryId] ? categoryMap[meta.categoryId].name : formatMetaLabel(meta.category),
+    formatMetaLabel(meta.color),
+    formatMetaLabel(meta.type)
+  ];
+  (meta.categoryIds || [])
+    .filter((categoryId) => categoryId !== meta.categoryId)
+    .forEach((categoryId) => chips.push(categoryMap[categoryId] ? categoryMap[categoryId].name : formatMetaLabel(categoryId)));
   if (meta.beaded) chips.push("Beaded");
   if (meta.charm) chips.push("Charm");
 
-  return `<div class="product-meta-chips">${chips.map((chip) => `<span>${chip}</span>`).join("")}</div>`;
+  return `<div class="product-meta-chips">${Array.from(new Set(chips.filter(Boolean))).map((chip) => `<span>${escapeHtml(chip)}</span>`).join("")}</div>`;
 }
 
 function updateCollectionUrl() {
   const params = new URLSearchParams();
-  ["category", "color", "style", "type", "feature", "price", "sort"].forEach((key) => {
+  ["search", "category", "subcategory", "availability", "color", "style", "type", "feature", "price", "sort"].forEach((key) => {
     if (collectionState[key] && collectionState[key] !== "all" && !(key === "sort" && collectionState[key] === "best")) {
       params.set(key, collectionState[key]);
     }
@@ -1128,6 +1383,59 @@ function setActiveFilterPills() {
     const group = pill.dataset.filterGroup;
     pill.classList.toggle("is-active", Boolean(group) && pill.dataset.filterValue === collectionState[group]);
   });
+}
+
+function buildCategoryMaps(categories) {
+  const map = categories.reduce((groups, category) => {
+    groups[category.id] = category;
+    groups[category.slug] = category;
+    return groups;
+  }, {});
+  window.imeldasCategoryMap = map;
+  return map;
+}
+
+function getMainCategories(categories) {
+  return categories.filter((category) => !category.parentId);
+}
+
+function getSubcategories(categories, parentId = "all") {
+  return categories.filter((category) => {
+    if (!category.parentId) return false;
+    return parentId === "all" || category.parentId === parentId;
+  });
+}
+
+function optionMarkup(value, label) {
+  return `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`;
+}
+
+async function populateCollectionFilters() {
+  const categories = await getCategories();
+  buildCategoryMaps(categories);
+
+  const categoryFilter = document.getElementById("collection-category-filter");
+  const subcategoryFilter = document.getElementById("collection-subcategory-filter");
+
+  if (categoryFilter) {
+    categoryFilter.innerHTML = [
+      optionMarkup("all", "All categories"),
+      ...getMainCategories(categories).map((category) => optionMarkup(category.id, category.name))
+    ].join("");
+    categoryFilter.value = categories.some((category) => category.id === collectionState.category) ? collectionState.category : "all";
+    collectionState.category = categoryFilter.value;
+  }
+
+  if (subcategoryFilter) {
+    const subcategories = getSubcategories(categories, collectionState.category);
+    subcategoryFilter.innerHTML = [
+      optionMarkup("all", "All subcategories"),
+      ...subcategories.map((category) => optionMarkup(category.id, category.name))
+    ].join("");
+    subcategoryFilter.disabled = subcategories.length === 0;
+    subcategoryFilter.value = subcategories.some((category) => category.id === collectionState.subcategory) ? collectionState.subcategory : "all";
+    collectionState.subcategory = subcategoryFilter.value;
+  }
 }
 
 function showToast(message) {
@@ -1464,9 +1772,12 @@ function insertCollectionPromo(list, index) {
   list.appendChild(promo);
 }
 
-function setupCollectionControls() {
+async function setupCollectionControls() {
   const params = new URLSearchParams(window.location.search);
+  if (params.get("search")) collectionState.search = params.get("search");
   if (params.get("category")) collectionState.category = params.get("category");
+  if (params.get("subcategory")) collectionState.subcategory = params.get("subcategory");
+  if (params.get("availability")) collectionState.availability = params.get("availability");
   if (params.get("color")) collectionState.color = params.get("color");
   if (params.get("sort")) collectionState.sort = params.get("sort");
   if (params.get("style")) collectionState.style = params.get("style");
@@ -1474,7 +1785,20 @@ function setupCollectionControls() {
   if (params.get("feature")) collectionState.feature = params.get("feature");
   if (params.get("price")) collectionState.price = params.get("price");
 
+  await populateCollectionFilters();
   setActiveFilterPills();
+
+  const searchInput = document.getElementById("collection-search");
+  if (searchInput) searchInput.value = collectionState.search;
+
+  const categoryFilter = document.getElementById("collection-category-filter");
+  if (categoryFilter) categoryFilter.value = collectionState.category;
+
+  const subcategoryFilter = document.getElementById("collection-subcategory-filter");
+  if (subcategoryFilter) subcategoryFilter.value = collectionState.subcategory;
+
+  const availabilityFilter = document.getElementById("collection-availability-filter");
+  if (availabilityFilter) availabilityFilter.value = collectionState.availability;
 
   const priceFilter = document.getElementById("collection-price-filter");
   if (priceFilter) priceFilter.value = collectionState.price;
@@ -1501,6 +1825,44 @@ function setupCollectionControls() {
     });
   });
 
+  if (searchInput) {
+    let searchTimer = null;
+    searchInput.addEventListener("input", () => {
+      window.clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(async () => {
+        collectionState.search = searchInput.value.trim();
+        updateCollectionUrl();
+        await renderProductList();
+      }, 180);
+    });
+  }
+
+  if (categoryFilter) {
+    categoryFilter.addEventListener("change", async (event) => {
+      collectionState.category = event.target.value;
+      collectionState.subcategory = "all";
+      await populateCollectionFilters();
+      updateCollectionUrl();
+      await renderProductList();
+    });
+  }
+
+  if (subcategoryFilter) {
+    subcategoryFilter.addEventListener("change", async (event) => {
+      collectionState.subcategory = event.target.value;
+      updateCollectionUrl();
+      await renderProductList();
+    });
+  }
+
+  if (availabilityFilter) {
+    availabilityFilter.addEventListener("change", async (event) => {
+      collectionState.availability = event.target.value;
+      updateCollectionUrl();
+      await renderProductList();
+    });
+  }
+
   if (priceFilter) {
     priceFilter.addEventListener("change", async (event) => {
       collectionState.price = event.target.value;
@@ -1516,6 +1878,32 @@ function setupCollectionControls() {
       await renderProductList();
     });
   }
+
+  const resetButton = document.getElementById("collection-reset-filters");
+  if (resetButton) {
+    resetButton.addEventListener("click", async () => {
+      Object.assign(collectionState, {
+        search: "",
+        category: "all",
+        subcategory: "all",
+        availability: "all",
+        color: "all",
+        style: "all",
+        type: "all",
+        feature: "all",
+        price: "all",
+        sort: "best"
+      });
+      if (searchInput) searchInput.value = "";
+      if (priceFilter) priceFilter.value = "all";
+      if (availabilityFilter) availabilityFilter.value = "all";
+      if (sortControl) sortControl.value = "best";
+      await populateCollectionFilters();
+      setActiveFilterPills();
+      updateCollectionUrl();
+      await renderProductList();
+    });
+  }
 }
 
 async function renderProductList() {
@@ -1523,11 +1911,32 @@ async function renderProductList() {
   if (!list) return;
   list.innerHTML = "";
 
+  const categories = await getCategories();
+  buildCategoryMaps(categories);
   const products = (await getProducts()).map(getProductWithMeta);
   const visibleProducts = sortCollectionProducts(products.filter(productMatchesCollection));
   const count = document.getElementById("collection-count");
   if (count) {
-    count.textContent = `${visibleProducts.length} bracelets found`;
+    count.textContent = `${visibleProducts.length} ${visibleProducts.length === 1 ? "product" : "products"} found`;
+  }
+
+  if (visibleProducts.length === 0) {
+    list.innerHTML = `
+      <article class="collection-empty-state">
+        <h2>No products match those filters</h2>
+        <p>Try clearing a category, search term, or price range to see more handmade pieces.</p>
+        <button class="button button-primary" type="button" id="collection-empty-reset">Reset filters</button>
+      </article>
+    `;
+    const emptyReset = document.getElementById("collection-empty-reset");
+    if (emptyReset) {
+      emptyReset.addEventListener("click", () => {
+        const resetButton = document.getElementById("collection-reset-filters");
+        if (resetButton) resetButton.click();
+      });
+    }
+    await renderTrendingProducts(products);
+    return;
   }
 
   visibleProducts.forEach((product, index) => {
@@ -1951,6 +2360,7 @@ async function upsertProduct(event) {
   const beadedInput = document.getElementById("product-beaded");
   const charmInput = document.getElementById("product-charm");
   const categoryInput = document.getElementById("product-category");
+  const subcategoryInputs = Array.from(document.querySelectorAll('input[name="productSubcategories"]:checked'));
   const badgeInput = document.getElementById("product-badge");
 
   if (!idInput || !nameInput || !priceInput || !stockInput || !imageInput || !hoverImageInput || !descriptionInput || !colorInput || !typeInput || !beadedInput || !charmInput || !categoryInput || !badgeInput) return;
@@ -1967,9 +2377,10 @@ async function upsertProduct(event) {
   const beaded = beadedInput.checked;
   const charm = charmInput.checked;
   const category = categoryInput.value;
+  const categoryIds = subcategoryInputs.map((input) => input.value);
   const badge = badgeInput.value.trim() || "Handmade";
 
-  if (!name || !Number.isFinite(price) || price <= 0 || !Number.isFinite(stock) || !image || !description) {
+  if (!name || !Number.isFinite(price) || price <= 0 || !Number.isFinite(stock) || !image || !description || !category) {
     await showPageAlert("Please fill in all fields with valid values.");
     return;
   }
@@ -1999,6 +2410,8 @@ async function upsertProduct(event) {
     beaded,
     charm,
     category,
+    categoryId: category,
+    categoryIds,
     badge,
     rating: existingProduct ? existingMeta.rating : 4.8,
     sortRank: existingProduct ? existingMeta.sortRank : products.length + 20
@@ -2011,15 +2424,117 @@ async function upsertProduct(event) {
     products.push(product);
   }
 
-  await saveProducts(products);
+  const savedCategoryLinks = await saveProducts(products);
+  if (!savedCategoryLinks && categoryIds.length > 0) {
+    await showPageAlert("The product was saved, but its subcategories could not be saved. Run the product_categories migration in the README, then edit this product again.", "Subcategory Save Failed");
+    return;
+  }
+
   document.getElementById("admin-form").reset();
   idInput.value = "";
   const imageUploadStatus = document.getElementById("product-image-upload-status");
   if (imageUploadStatus) imageUploadStatus.textContent = "Images are optimised before saving to the media folder.";
   const hoverImageUploadStatus = document.getElementById("product-hover-image-upload-status");
   if (hoverImageUploadStatus) hoverImageUploadStatus.textContent = "Optional alternate image shown on hover.";
-  document.getElementById("admin-submit").textContent = "Add Bracelet";
+  document.getElementById("admin-submit").textContent = "Add Product";
+  await populateAdminProductCategoryFields();
   await renderAdminProducts();
+}
+
+async function populateAdminProductCategoryFields(selectedMain = "", selectedSubcategories = []) {
+  const categoryInput = document.getElementById("product-category");
+  const subcategoryWrap = document.getElementById("product-subcategories");
+  if (!categoryInput || !subcategoryWrap) return;
+
+  const categories = await getCategories();
+  buildCategoryMaps(categories);
+  const mainCategories = getMainCategories(categories);
+  const selectedCategory = selectedMain || categoryInput.value || (mainCategories[0] && mainCategories[0].id) || "";
+
+  categoryInput.innerHTML = mainCategories.map((category) => optionMarkup(category.id, category.name)).join("");
+  categoryInput.value = mainCategories.some((category) => category.id === selectedCategory) ? selectedCategory : (mainCategories[0] && mainCategories[0].id) || "";
+
+  const subcategories = getSubcategories(categories, categoryInput.value);
+  const selected = new Set(selectedSubcategories);
+  subcategoryWrap.innerHTML = subcategories.length > 0
+    ? subcategories.map((category) => `
+        <label>
+          <input name="productSubcategories" type="checkbox" value="${escapeHtml(category.id)}" ${selected.has(category.id) ? "checked" : ""} />
+          ${escapeHtml(category.name)}
+        </label>
+      `).join("")
+    : `<p class="admin-upload-note">No subcategories yet for this main category.</p>`;
+}
+
+async function upsertCategory(event) {
+  event.preventDefault();
+
+  const idInput = document.getElementById("category-id");
+  const nameInput = document.getElementById("category-name");
+  const parentInput = document.getElementById("category-parent");
+  const sortInput = document.getElementById("category-sort-order");
+  const activeInput = document.getElementById("category-active");
+  if (!idInput || !nameInput || !parentInput || !sortInput || !activeInput) return;
+
+  const existingId = idInput.value.trim();
+  const name = nameInput.value.trim();
+  const slug = slugify(name);
+  if (!name || !slug) {
+    await showPageAlert("Please enter a category name.");
+    return;
+  }
+
+  const categories = await getCategories({ includeInactive: true });
+  const id = existingId || slug;
+  const duplicate = categories.find((category) => category.id !== existingId && (category.id === id || category.slug === slug));
+  if (duplicate) {
+    await showPageAlert("That category already exists. Use a different name.");
+    return;
+  }
+
+  await saveCategory({
+    id,
+    name,
+    slug,
+    parentId: parentInput.value || null,
+    isActive: activeInput.checked,
+    sortOrder: Number(sortInput.value) || 50
+  });
+
+  resetCategoryForm();
+  await renderAdminCategories();
+  await populateAdminProductCategoryFields();
+}
+
+function resetCategoryForm() {
+  const form = document.getElementById("admin-category-form");
+  const idInput = document.getElementById("category-id");
+  const submitButton = document.getElementById("admin-category-submit");
+  if (form) form.reset();
+  if (idInput) idInput.value = "";
+  if (submitButton) submitButton.textContent = "Add Category";
+}
+
+async function editCategory(categoryId) {
+  const category = (await getCategories({ includeInactive: true })).find((item) => item.id === categoryId);
+  if (!category) return;
+
+  document.getElementById("category-id").value = category.id;
+  document.getElementById("category-name").value = category.name;
+  document.getElementById("category-parent").value = category.parentId || "";
+  document.getElementById("category-sort-order").value = category.sortOrder;
+  document.getElementById("category-active").checked = category.isActive;
+  document.getElementById("admin-category-submit").textContent = "Save Category";
+  document.getElementById("admin-categories").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function deleteCategory(categoryId) {
+  const result = await deleteCategoryRecord(categoryId);
+  await renderAdminCategories();
+  await populateAdminProductCategoryFields();
+  if (result === "disabled") {
+    await showPageAlert("That category is used by existing products, so it was disabled instead of deleted.");
+  }
 }
 
 async function editProduct(productId) {
@@ -2049,6 +2564,7 @@ async function editProduct(productId) {
   document.getElementById("product-beaded").checked = meta.beaded;
   document.getElementById("product-charm").checked = meta.charm;
   document.getElementById("product-category").value = meta.category;
+  await populateAdminProductCategoryFields(meta.categoryId || meta.category, meta.categoryIds || []);
   document.getElementById("product-badge").value = meta.badge;
   document.getElementById("admin-submit").textContent = "Save Changes";
   document.getElementById("admin-products").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2071,6 +2587,7 @@ async function renderAdminProducts() {
   if (!list) return;
 
   list.innerHTML = "";
+  await populateAdminProductCategoryFields();
 
   (await getProducts()).map(getProductWithMeta).forEach((product) => {
     const item = document.createElement("article");
@@ -2096,6 +2613,58 @@ async function renderAdminProducts() {
 
     item.querySelector('[data-action="edit"]').addEventListener("click", () => editProduct(product.id));
     item.querySelector('[data-action="delete"]').addEventListener("click", () => deleteProduct(product.id));
+    list.appendChild(item);
+  });
+}
+
+async function renderAdminCategories() {
+  const list = document.getElementById("admin-category-list");
+  const parentInput = document.getElementById("category-parent");
+  if (!list) return;
+
+  const categories = await getCategories({ includeInactive: true });
+  buildCategoryMaps(categories);
+
+  if (parentInput) {
+    const currentValue = parentInput.value;
+    parentInput.innerHTML = [
+      optionMarkup("", "Main category"),
+      ...getMainCategories(categories).map((category) => optionMarkup(category.id, category.name))
+    ].join("");
+    parentInput.value = currentValue;
+  }
+
+  list.innerHTML = "";
+
+  if (!categoriesTableAvailable) {
+    list.innerHTML = `
+      <article class="admin-item admin-order-item">
+        <div class="admin-item-content">
+          <h3>Categories are not connected yet</h3>
+          <p>Run the README category migration in Supabase, then refresh this page.</p>
+        </div>
+      </article>
+    `;
+    return;
+  }
+
+  categories.forEach((category) => {
+    const parent = category.parentId ? categories.find((item) => item.id === category.parentId) : null;
+    const item = document.createElement("article");
+    item.className = "admin-item admin-category-item";
+    item.innerHTML = `
+      <div class="admin-item-content">
+        <h3>${escapeHtml(category.name)}</h3>
+        <p>${parent ? `Under ${escapeHtml(parent.name)}` : "Main category"} - ${category.isActive ? "Active" : "Disabled"} - Sort ${category.sortOrder}</p>
+      </div>
+      <div class="admin-item-actions">
+        <button class="add-button" data-action="edit-category" data-id="${escapeHtml(category.id)}">Edit</button>
+        <button class="remove-button" data-action="delete-category" data-id="${escapeHtml(category.id)}">${category.isActive ? "Delete/Disable" : "Delete"}</button>
+      </div>
+    `;
+
+    item.querySelector('[data-action="edit-category"]').addEventListener("click", () => editCategory(category.id));
+    item.querySelector('[data-action="delete-category"]').addEventListener("click", () => deleteCategory(category.id));
     list.appendChild(item);
   });
 }
@@ -2398,6 +2967,7 @@ function showAdminSection(sectionId = "admin-products") {
 
 async function renderAdminDashboard() {
   await renderAdminProducts();
+  await renderAdminCategories();
   await renderAdminOrders();
   await renderAdminSlideshow();
   await renderAdminUsers();
@@ -2445,10 +3015,12 @@ function handleAdminLogout() {
 async function setupAdminPage() {
   const loginForm = document.getElementById("admin-login-form");
   const form = document.getElementById("admin-form");
+  const categoryForm = document.getElementById("admin-category-form");
   const userForm = document.getElementById("admin-user-form");
-  if (!form || !loginForm || !userForm) return;
+  if (!form || !loginForm || !categoryForm || !userForm) return;
 
   await ensureAdminUsers();
+  await ensureCategories();
   await ensureSlideshowSettings();
 
   const existingSession = getAdminSession();
@@ -2462,6 +3034,14 @@ async function setupAdminPage() {
   loginForm.addEventListener("submit", handleAdminLogin);
 
   form.addEventListener("submit", upsertProduct);
+  categoryForm.addEventListener("submit", upsertCategory);
+
+  const productCategoryInput = document.getElementById("product-category");
+  if (productCategoryInput) {
+    productCategoryInput.addEventListener("change", () => {
+      populateAdminProductCategoryFields(productCategoryInput.value, []);
+    });
+  }
 
   const slideshowSettingsForm = document.getElementById("admin-slideshow-settings-form");
   if (slideshowSettingsForm) {
@@ -2485,11 +3065,19 @@ async function setupAdminPage() {
   if (resetButton && idInput) {
     resetButton.addEventListener("click", () => {
       idInput.value = "";
-      document.getElementById("admin-submit").textContent = "Add Bracelet";
+      document.getElementById("admin-submit").textContent = "Add Product";
       const imageUploadStatus = document.getElementById("product-image-upload-status");
       if (imageUploadStatus) imageUploadStatus.textContent = "Images are optimised before saving to the media folder.";
       const hoverImageUploadStatus = document.getElementById("product-hover-image-upload-status");
       if (hoverImageUploadStatus) hoverImageUploadStatus.textContent = "Optional alternate image shown on hover.";
+      window.setTimeout(() => populateAdminProductCategoryFields(), 0);
+    });
+  }
+
+  const categoryResetButton = document.getElementById("admin-category-reset");
+  if (categoryResetButton) {
+    categoryResetButton.addEventListener("click", () => {
+      window.setTimeout(resetCategoryForm, 0);
     });
   }
 
@@ -2530,6 +3118,9 @@ async function setupAdminPage() {
       event.preventDefault();
       const sectionId = (link.getAttribute("href") || "#admin-products").replace("#", "");
       showAdminSection(sectionId);
+      if (sectionId === "admin-categories") {
+        await renderAdminCategories();
+      }
       if (sectionId === "admin-orders") {
         await renderAdminOrders();
       }
@@ -2728,9 +3319,10 @@ function handleCheckout() {
 
 async function initPage() {
   await initSupabase();
+  await ensureCategories();
   await ensureProductCatalog();
   await ensureSlideshowSettings();
-  setupCollectionControls();
+  await setupCollectionControls();
   await renderHeroSlideshow();
   await renderFeaturedProducts();
   await renderProductList();

@@ -49,6 +49,7 @@
 
       <nav class="admin-menu" aria-label="Admin sections">
         <a href="#admin-products" data-admin-section-link>Products</a>
+        <a href="#admin-categories" data-admin-section-link>Categories</a>
         <a href="#admin-orders" data-admin-section-link>Orders</a>
         <a href="#admin-slideshow" data-admin-section-link>Homepage Slideshow</a>
         <a href="#admin-users" data-admin-section-link>Admin Users</a>
@@ -58,7 +59,7 @@
         <form id="admin-form" class="checkout-form admin-form">
           <input id="product-id" name="productId" type="hidden" />
 
-          <label for="product-name">Bracelet name</label>
+          <label for="product-name">Product name</label>
           <input id="product-name" name="name" type="text" required />
 
           <label for="product-price">Price (USD)</label>
@@ -110,11 +111,8 @@
 
           <div class="admin-form-row">
             <div>
-              <label for="product-category">Shop category</label>
-              <select id="product-category" name="category" required>
-                <option value="bracelets">Bracelets</option>
-                <option value="sale">Sale</option>
-              </select>
+              <label for="product-category">Main category</label>
+              <select id="product-category" name="category" required></select>
             </div>
             <div>
               <label for="product-badge">Badge</label>
@@ -122,13 +120,50 @@
             </div>
           </div>
 
+          <div class="admin-field-group">
+            <label>Subcategories / product types</label>
+            <div id="product-subcategories" class="admin-checkbox-row admin-category-options"></div>
+            <p class="admin-upload-note">Add and edit these in the Categories section.</p>
+          </div>
+
           <div class="admin-form-actions">
-            <button class="button button-primary" id="admin-submit" type="submit">Add Bracelet</button>
+            <button class="button button-primary" id="admin-submit" type="submit">Add Product</button>
             <button class="button" id="admin-reset" type="reset">Clear</button>
           </div>
         </form>
 
         <div id="admin-product-list" class="admin-list"></div>
+      </section>
+
+      <section class="admin-section admin-grid" id="admin-categories" data-admin-section hidden>
+        <form id="admin-category-form" class="checkout-form admin-form">
+          <input id="category-id" name="categoryId" type="hidden" />
+
+          <label for="category-name">Category name</label>
+          <input id="category-name" name="name" type="text" required />
+
+          <label for="category-parent">Parent category</label>
+          <select id="category-parent" name="parentId">
+            <option value="">Main category</option>
+          </select>
+
+          <div class="admin-form-row">
+            <div>
+              <label for="category-sort-order">Sort order</label>
+              <input id="category-sort-order" name="sortOrder" type="number" step="1" value="50" />
+            </div>
+            <div class="admin-checkbox-row admin-single-checkbox">
+              <label><input id="category-active" name="isActive" type="checkbox" checked /> Active</label>
+            </div>
+          </div>
+
+          <div class="admin-form-actions">
+            <button class="button button-primary" id="admin-category-submit" type="submit">Add Category</button>
+            <button class="button" id="admin-category-reset" type="reset">Clear</button>
+          </div>
+        </form>
+
+        <div id="admin-category-list" class="admin-list"></div>
       </section>
 
       <section class="admin-section admin-users-section" id="admin-orders" data-admin-section hidden>

@@ -42,11 +42,50 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
      beaded boolean not null default true,
      charm boolean not null default false,
      category text not null default 'bracelets',
+     category_id text,
      badge text not null default 'Handmade',
      rating numeric not null default 4.8,
      sort_rank integer not null default 20,
      stock_quantity integer not null default 12 check (stock_quantity >= 0)
    );
+
+   create table if not exists categories (
+     id text primary key,
+     name text not null,
+     slug text not null unique,
+     parent_id text references categories(id) on delete restrict,
+     is_active boolean not null default true,
+     sort_order integer not null default 50,
+     created_at timestamptz not null default now(),
+     updated_at timestamptz not null default now()
+   );
+
+   create table if not exists product_categories (
+     product_id text not null references products(id) on delete cascade,
+     category_id text not null references categories(id) on delete cascade,
+     primary key (product_id, category_id)
+   );
+
+   insert into categories (id, name, slug, parent_id, is_active, sort_order)
+   values
+     ('bracelets', 'Bracelets', 'bracelets', null, true, 10),
+     ('friendship-bracelets', 'Friendship Bracelets', 'friendship-bracelets', 'bracelets', true, 10),
+     ('paracord-survival-bracelets', 'Paracord Survival Bracelets', 'paracord-survival-bracelets', 'bracelets', true, 20),
+     ('gifts', 'Gifts', 'gifts', null, true, 20),
+     ('winter-gifts', 'Winter Gifts', 'winter-gifts', 'gifts', true, 10),
+     ('general-gifts', 'General Gifts', 'general-gifts', 'gifts', true, 20),
+     ('resin-products', 'Resin Products', 'resin-products', null, true, 30)
+   on conflict (id) do nothing;
+
+   update products
+   set category_id = category
+   where category_id is null;
+
+   insert into product_categories (product_id, category_id)
+   select products.id, coalesce(products.category_id, products.category)
+   from products
+   join categories on categories.id = coalesce(products.category_id, products.category)
+   on conflict do nothing;
 
    create table if not exists admin_users (
      username text primary key,
@@ -88,10 +127,49 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
    alter table products add column if not exists beaded boolean not null default true;
    alter table products add column if not exists charm boolean not null default false;
    alter table products add column if not exists category text not null default 'bracelets';
+   alter table products add column if not exists category_id text;
    alter table products add column if not exists badge text not null default 'Handmade';
    alter table products add column if not exists rating numeric not null default 4.8;
    alter table products add column if not exists sort_rank integer not null default 20;
    alter table products add column if not exists stock_quantity integer not null default 12 check (stock_quantity >= 0);
+
+   create table if not exists categories (
+     id text primary key,
+     name text not null,
+     slug text not null unique,
+     parent_id text references categories(id) on delete restrict,
+     is_active boolean not null default true,
+     sort_order integer not null default 50,
+     created_at timestamptz not null default now(),
+     updated_at timestamptz not null default now()
+   );
+
+   create table if not exists product_categories (
+     product_id text not null references products(id) on delete cascade,
+     category_id text not null references categories(id) on delete cascade,
+     primary key (product_id, category_id)
+   );
+
+   insert into categories (id, name, slug, parent_id, is_active, sort_order)
+   values
+     ('bracelets', 'Bracelets', 'bracelets', null, true, 10),
+     ('friendship-bracelets', 'Friendship Bracelets', 'friendship-bracelets', 'bracelets', true, 10),
+     ('paracord-survival-bracelets', 'Paracord Survival Bracelets', 'paracord-survival-bracelets', 'bracelets', true, 20),
+     ('gifts', 'Gifts', 'gifts', null, true, 20),
+     ('winter-gifts', 'Winter Gifts', 'winter-gifts', 'gifts', true, 10),
+     ('general-gifts', 'General Gifts', 'general-gifts', 'gifts', true, 20),
+     ('resin-products', 'Resin Products', 'resin-products', null, true, 30)
+   on conflict (id) do nothing;
+
+   update products
+   set category_id = category
+   where category_id is null;
+
+   insert into product_categories (product_id, category_id)
+   select products.id, coalesce(products.category_id, products.category)
+   from products
+   join categories on categories.id = coalesce(products.category_id, products.category)
+   on conflict do nothing;
 
    create table if not exists orders (
      id text primary key,
@@ -133,6 +211,8 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
 ## Notes
 
 - Products, stock quantities, slideshow settings, admin users, carts, and orders are stored in Supabase.
+- Product categories are managed from Admin > Categories. Create a main category by leaving Parent category set to "Main category"; create a subcategory by choosing a parent. Disabled categories stay in admin for existing products but are hidden from shop filters and product assignment.
+- Product filters on `products.html` are built from active admin categories, so future categories like Keyrings, Phone charms, Puffy paint cases, and Custom gifts can be added without changing the storefront code.
 - Product images uploaded in the admin Products section are compressed in the browser, saved under `media/products/`, and the saved media path is stored against the product.
 - The cart uses a browser cookie as an anonymous cart id.
 - `.env` is ignored by git so your real keys stay local.

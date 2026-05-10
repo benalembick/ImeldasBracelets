@@ -40,18 +40,15 @@
     </section>
 
     <section class="container collection-shell">
-      <div class="filter-sort-bar" aria-label="Filter and sort bracelets">
-        <button class="filter-pill is-active" type="button" data-filter-group="color" data-filter-value="all">All colors</button>
-        <button class="filter-pill" type="button" data-filter-group="color" data-filter-value="pink">Pink</button>
-        <button class="filter-pill" type="button" data-filter-group="color" data-filter-value="blue">Blue</button>
-        <button class="filter-pill" type="button" data-filter-group="color" data-filter-value="yellow">Yellow</button>
-        <button class="filter-pill" type="button" data-filter-group="color" data-filter-value="multi">Multi</button>
-        <button class="filter-pill is-active" type="button" data-filter-group="feature" data-filter-value="all">All features</button>
-        <button class="filter-pill" type="button" data-filter-group="feature" data-filter-value="beaded">Beaded</button>
-        <button class="filter-pill" type="button" data-filter-group="feature" data-filter-value="charm">Charm</button>
-        <button class="filter-pill is-active" type="button" data-filter-group="type" data-filter-value="all">All types</button>
-        <button class="filter-pill" type="button" data-filter-group="type" data-filter-value="bracelet">Bracelet</button>
-        <button class="filter-pill" type="button" data-filter-group="type" data-filter-value="custom">Custom</button>
+      <div class="filter-sort-bar product-filter-panel" aria-label="Search, filter, and sort products">
+        <label class="sr-only" for="collection-search">Search products</label>
+        <input id="collection-search" type="search" placeholder="Search products" autocomplete="off" />
+        <select id="collection-category-filter" aria-label="Filter by main category">
+          <option value="all">All categories</option>
+        </select>
+        <select id="collection-subcategory-filter" aria-label="Filter by subcategory or product type">
+          <option value="all">All subcategories</option>
+        </select>
         <select id="collection-price-filter" aria-label="Filter by price">
           <option value="all">All prices</option>
           <option value="under-17">Under $17</option>
@@ -59,12 +56,18 @@
           <option value="over-20">Over $20</option>
           <option value="sale">Sale picks</option>
         </select>
+        <select id="collection-availability-filter" aria-label="Filter by availability">
+          <option value="all">All availability</option>
+          <option value="in-stock">In stock</option>
+          <option value="sold-out">Sold out</option>
+        </select>
         <select id="collection-sort" aria-label="Sort products">
           <option value="best">Best selling</option>
           <option value="newest">Newest</option>
           <option value="price-low">Price, low to high</option>
           <option value="price-high">Price, high to low</option>
         </select>
+        <button class="button" id="collection-reset-filters" type="button">Reset filters</button>
       </div>
 
       <div class="collection-meta">

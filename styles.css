@@ -395,6 +395,29 @@ h3 {
   backdrop-filter: blur(16px);
 }
 
+.product-filter-panel {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.5fr) repeat(5, minmax(145px, 1fr)) auto;
+  align-items: center;
+  overflow-x: visible;
+}
+
+.product-filter-panel input,
+.product-filter-panel select {
+  min-width: 0;
+}
+
+.product-filter-panel input {
+  min-height: 2.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  color: var(--ink);
+  background: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
 .filter-pill,
 .filter-sort-bar select {
   flex: 0 0 auto;
@@ -441,6 +464,22 @@ h3 {
 
 .collection-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.collection-empty-state {
+  grid-column: 1 / -1;
+  padding: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.collection-empty-state p {
+  max-width: 540px;
+  margin: 0.4rem auto 1rem;
+  color: var(--muted);
 }
 
 .featured-section .product-grid,
@@ -764,6 +803,23 @@ h3 {
   border-radius: 999px;
   padding: 0.55rem 0.9rem;
   background: #ffffff;
+}
+
+.admin-field-group {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.admin-category-options {
+  align-items: start;
+}
+
+.admin-category-options .admin-upload-note {
+  margin: 0;
+}
+
+.admin-single-checkbox {
+  align-items: end;
 }
 
 .product-meta-chips {
@@ -1691,6 +1747,10 @@ button:disabled {
   align-items: start;
 }
 
+.admin-category-item {
+  grid-template-columns: 1fr auto;
+}
+
 .admin-order-item .admin-item-content {
   display: grid;
   gap: 0.35rem;
@@ -1763,6 +1823,10 @@ button:disabled {
   .filter-sort-bar,
   .admin-menu {
     top: 12.65rem;
+  }
+
+  .product-filter-panel {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
   }
 }
 
@@ -1843,6 +1907,18 @@ button:disabled {
     border-radius: 0;
     border-left: 0;
     border-right: 0;
+  }
+
+  .product-filter-panel {
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+    overflow-x: visible;
+  }
+
+  .product-filter-panel input,
+  .product-filter-panel select,
+  .product-filter-panel .button {
+    width: 100%;
   }
 
   .collection-grid,
