@@ -305,6 +305,127 @@ function createId(prefix) {
   return `${prefix}-${randomPart}`;
 }
 
+function formatFileSize(bytes) {
+  const size = Number(bytes) || 0;
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read that image file."));
+    };
+    image.src = url;
+  });
+}
+
+async function optimiseImageFile(file) {
+  if (!file || !file.type.startsWith("image/")) {
+    throw new Error("Please choose an image file.");
+  }
+
+  const image = await loadImageFromFile(file);
+  const maxDimension = 1400;
+  const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+  const context = canvas.getContext("2d");
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  let quality = 0.82;
+  let dataUrl = canvas.toDataURL("image/webp", quality);
+  const maxDataUrlLength = 900 * 1024 * 1.37;
+
+  while (dataUrl.length > maxDataUrlLength && quality > 0.5) {
+    quality -= 0.08;
+    dataUrl = canvas.toDataURL("image/webp", quality);
+  }
+
+  return {
+    dataUrl,
+    width: canvas.width,
+    height: canvas.height,
+    originalBytes: file.size,
+    optimisedBytes: Math.round((dataUrl.length - "data:image/webp;base64,".length) * 0.75)
+  };
+}
+
+async function uploadProductImage(file) {
+  const optimised = await optimiseImageFile(file);
+  let response;
+
+  try {
+    response = await fetch("/upload-product-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filename: file.name,
+        dataUrl: optimised.dataUrl
+      })
+    });
+  } catch (_error) {
+    throw new Error("Image upload failed because the local server is not running. Start the app with npm start, then open it from http://localhost:3000/admin.html.");
+  }
+
+  const responseText = await response.text();
+  let result = {};
+
+  try {
+    result = responseText ? JSON.parse(responseText) : {};
+  } catch (_error) {
+    result = {};
+  }
+
+  if (!response.ok) {
+    if (response.status === 404 || responseText.includes("Cannot POST /upload-product-image")) {
+      throw new Error("Image upload failed because the running server is old. Stop it and restart with npm start so the upload route is available.");
+    }
+
+    throw new Error(result.error || responseText || "Image upload failed.");
+  }
+
+  return {
+    ...result,
+    ...optimised
+  };
+}
+
+async function handleProductImageUpload(event, options = {}) {
+  const file = event.target.files && event.target.files[0];
+  const imageInput = document.getElementById(options.inputId || "product-image");
+  const status = document.getElementById(options.statusId || "product-image-upload-status");
+  const savedMessage = options.savedMessage || "in media/products.";
+
+  if (!file || !imageInput || !status) return;
+
+  try {
+    status.textContent = `Optimising ${file.name}...`;
+    event.target.disabled = true;
+    const uploaded = await uploadProductImage(file);
+    imageInput.value = uploaded.url;
+    status.textContent = `Saved ${formatFileSize(uploaded.originalBytes)} as ${formatFileSize(uploaded.bytes || uploaded.optimisedBytes)} ${savedMessage}`;
+  } catch (error) {
+    status.textContent = error.message || "Image upload failed.";
+    await showPageAlert(status.textContent);
+  } finally {
+    event.target.disabled = false;
+  }
+}
+
 function getCartId() {
   const existing = readCookie(cartCookieName);
   if (existing) return existing;
@@ -1688,6 +1809,10 @@ async function upsertProduct(event) {
   await saveProducts(products);
   document.getElementById("admin-form").reset();
   idInput.value = "";
+  const imageUploadStatus = document.getElementById("product-image-upload-status");
+  if (imageUploadStatus) imageUploadStatus.textContent = "Images are optimised before saving to the media folder.";
+  const hoverImageUploadStatus = document.getElementById("product-hover-image-upload-status");
+  if (hoverImageUploadStatus) hoverImageUploadStatus.textContent = "Optional alternate image shown on hover.";
   document.getElementById("admin-submit").textContent = "Add Bracelet";
   await renderAdminProducts();
 }
@@ -1702,7 +1827,17 @@ async function editProduct(productId) {
   document.getElementById("product-price").value = product.price;
   document.getElementById("product-stock").value = product.stock;
   document.getElementById("product-image").value = product.image;
+  const imageUploadStatus = document.getElementById("product-image-upload-status");
+  if (imageUploadStatus) imageUploadStatus.textContent = product.image.startsWith("/media/") ? "Using uploaded media folder image." : "Using an external image URL.";
   document.getElementById("product-hover-image").value = product.hoverImage || "";
+  const hoverImageUploadStatus = document.getElementById("product-hover-image-upload-status");
+  if (hoverImageUploadStatus) {
+    hoverImageUploadStatus.textContent = product.hoverImage
+      ? product.hoverImage.startsWith("/media/")
+        ? "Using uploaded media folder hover image."
+        : "Using an external hover image URL."
+      : "Optional alternate image shown on hover.";
+  }
   document.getElementById("product-description").value = product.description;
   document.getElementById("product-color").value = meta.color;
   document.getElementById("product-type").value = meta.type;
@@ -2146,6 +2281,26 @@ async function setupAdminPage() {
     resetButton.addEventListener("click", () => {
       idInput.value = "";
       document.getElementById("admin-submit").textContent = "Add Bracelet";
+      const imageUploadStatus = document.getElementById("product-image-upload-status");
+      if (imageUploadStatus) imageUploadStatus.textContent = "Images are optimised before saving to the media folder.";
+      const hoverImageUploadStatus = document.getElementById("product-hover-image-upload-status");
+      if (hoverImageUploadStatus) hoverImageUploadStatus.textContent = "Optional alternate image shown on hover.";
+    });
+  }
+
+  const imageUploadInput = document.getElementById("product-image-upload");
+  if (imageUploadInput) {
+    imageUploadInput.addEventListener("change", handleProductImageUpload);
+  }
+
+  const hoverImageUploadInput = document.getElementById("product-hover-image-upload");
+  if (hoverImageUploadInput) {
+    hoverImageUploadInput.addEventListener("change", (event) => {
+      handleProductImageUpload(event, {
+        inputId: "product-hover-image",
+        statusId: "product-hover-image-upload-status",
+        savedMessage: "as the hover image."
+      });
     });
   }
 

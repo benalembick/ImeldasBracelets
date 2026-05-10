@@ -13,6 +13,7 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
 - `styles.css` - responsive styling.
 - `script.js` - product rendering, cart logic, Supabase persistence, and Stripe payment handling.
 - `server.js` - Express server for static files, Supabase config, and Stripe payment intents.
+- `media/products/` - locally uploaded and optimised product images.
 
 ## Setup
 
@@ -126,6 +127,7 @@ Simple e-commerce demo site built with HTML, CSS, vanilla JavaScript, Supabase d
 ## Notes
 
 - Products, stock quantities, slideshow settings, admin users, carts, and orders are stored in Supabase.
+- Product images uploaded in the admin Products section are compressed in the browser, saved under `media/products/`, and the saved media path is stored against the product.
 - The cart uses a browser cookie as an anonymous cart id.
 - `.env` is ignored by git so your real keys stay local.
 - The default admin login is `admin` / `admin123`; change it from the admin page after first login.

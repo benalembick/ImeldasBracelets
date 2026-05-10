@@ -1494,6 +1494,12 @@ button:disabled {
   max-width: 460px;
 }
 
+.admin-upload-note {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: -0.35rem;
+}
+
 .admin-item {
   display: grid;
   grid-template-columns: 100px 1fr auto;

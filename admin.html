@@ -71,11 +71,15 @@
           <label for="product-stock">Stock available</label>
           <input id="product-stock" name="stock" type="number" min="0" step="1" required />
 
-          <label for="product-image">Image URL</label>
-          <input id="product-image" name="image" type="url" required />
+          <label for="product-image-upload">Product image</label>
+          <input id="product-image-upload" name="imageUpload" type="file" accept="image/*" />
+          <input id="product-image" name="image" type="text" placeholder="Upload an image or paste an image URL" required />
+          <p class="admin-upload-note" id="product-image-upload-status">Images are optimised before saving to the media folder.</p>
 
-          <label for="product-hover-image">Hover image URL</label>
-          <input id="product-hover-image" name="hoverImage" type="url" placeholder="Optional alternate image shown on hover" />
+          <label for="product-hover-image-upload">Hover image</label>
+          <input id="product-hover-image-upload" name="hoverImageUpload" type="file" accept="image/*" />
+          <input id="product-hover-image" name="hoverImage" type="text" placeholder="Upload an optional hover image or paste an image URL" />
+          <p class="admin-upload-note" id="product-hover-image-upload-status">Optional alternate image shown on hover.</p>
 
           <label for="product-description">Description</label>
           <textarea id="product-description" name="description" rows="4" required></textarea>

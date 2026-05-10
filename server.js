@@ -28,6 +28,8 @@ loadEnvFile();
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
 const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || '';
+const mediaDir = path.join(__dirname, 'media');
+const productMediaDir = path.join(mediaDir, 'products');
 
 if (!stripeSecretKey.startsWith('sk_')) {
   console.warn('Stripe is not configured: STRIPE_SECRET_KEY must start with sk_test_ or sk_live_.');
@@ -39,8 +41,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: '12mb' }));
 app.use(express.static(path.join(__dirname)));
+
+fs.mkdirSync(productMediaDir, { recursive: true });
 
 app.get('/supabase-config', (_req, res) => {
   res.send({
@@ -53,6 +57,48 @@ app.get('/stripe-config', (_req, res) => {
   res.send({
     publishableKey: stripePublishableKey.startsWith('pk_') ? stripePublishableKey : '',
   });
+});
+
+app.post('/upload-product-image', async (req, res) => {
+  try {
+    const { filename, dataUrl } = req.body || {};
+    const match = typeof dataUrl === 'string'
+      ? dataUrl.match(/^data:image\/(webp|jpeg|jpg|png);base64,([A-Za-z0-9+/=]+)$/)
+      : null;
+
+    if (!match) {
+      return res.status(400).send({ error: 'Please upload a valid image file.' });
+    }
+
+    const extension = match[1] === 'jpeg' || match[1] === 'jpg' ? 'jpg' : match[1];
+    const buffer = Buffer.from(match[2], 'base64');
+    const maxBytes = 4 * 1024 * 1024;
+
+    if (!buffer.length || buffer.length > maxBytes) {
+      return res.status(400).send({ error: 'Optimised image must be under 4MB.' });
+    }
+
+    const safeBaseName = path
+      .basename(filename || `product-${Date.now()}`)
+      .replace(/\.[^.]+$/, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 48) || 'product-image';
+    const savedName = `${safeBaseName}-${Date.now()}.${extension}`;
+    const outputPath = path.join(productMediaDir, savedName);
+
+    fs.writeFileSync(outputPath, buffer);
+
+    res.send({
+      url: `/media/products/${savedName}`,
+      bytes: buffer.length,
+    });
+  } catch (error) {
+    res.status(500).send({
+      error: error.message || 'Image upload failed.',
+    });
+  }
 });
 
 // Create payment intent
