@@ -1731,6 +1731,59 @@ async function renderCart() {
   cartTotal.textContent = `Total: ${formatPrice(await calculateCartTotal())}`;
 }
 
+async function renderCheckoutSummary() {
+  const itemsContainer = document.getElementById("checkout-summary-items");
+  const countEl = document.getElementById("checkout-summary-count");
+  const subtotalEl = document.getElementById("checkout-subtotal");
+  const shippingEl = document.getElementById("checkout-shipping");
+  const totalEl = document.getElementById("checkout-total");
+  if (!itemsContainer || !countEl || !subtotalEl || !shippingEl || !totalEl) return false;
+
+  const products = await getProducts();
+  const cart = await getCart();
+  const summaryItems = cart
+    .map((cartItem) => {
+      const product = products.find((item) => item.id === cartItem.id);
+      if (!product) return null;
+      return {
+        product,
+        quantity: cartItem.quantity,
+        lineTotal: product.price * cartItem.quantity
+      };
+    })
+    .filter(Boolean);
+
+  const itemCount = summaryItems.reduce((total, item) => total + item.quantity, 0);
+  const subtotal = summaryItems.reduce((total, item) => total + item.lineTotal, 0);
+  const shippingAmount = 0;
+  const total = subtotal + shippingAmount;
+
+  countEl.textContent = `${itemCount} ${itemCount === 1 ? "item" : "items"}`;
+  subtotalEl.textContent = formatPrice(subtotal);
+  shippingEl.textContent = shippingAmount === 0 ? "Free" : formatPrice(shippingAmount);
+  totalEl.textContent = formatPrice(total);
+
+  if (summaryItems.length === 0) {
+    itemsContainer.innerHTML = `<p class="summary-empty">Your cart is empty. <a href="products.html">Add a bracelet</a> before checkout.</p>`;
+    return false;
+  }
+
+  itemsContainer.innerHTML = summaryItems
+    .map(({ product, quantity, lineTotal }) => `
+      <article class="checkout-summary-item">
+        <img src="${product.image}" alt="${product.name}" />
+        <div>
+          <h3>${product.name}</h3>
+          <p>${quantity} x ${formatPrice(product.price)}</p>
+        </div>
+        <strong class="checkout-summary-price">${formatPrice(lineTotal)}</strong>
+      </article>
+    `)
+    .join("");
+
+  return true;
+}
+
 async function upsertProduct(event) {
   event.preventDefault();
 
@@ -2343,10 +2396,30 @@ function handleCheckout() {
   if (!checkoutForm) return;
 
   let stripe;
-  let cardElement;
+  let cardNumberElement;
+  let cardExpiryElement;
+  let cardCvcElement;
+  let stripeReady = false;
+  let checkoutHasItems = false;
 
   const submitButton = document.getElementById("submit-button");
   const displayError = document.getElementById("card-errors");
+  const billingPostcodeInput = document.getElementById("billing-postcode");
+
+  function updateSubmitState() {
+    submitButton.disabled = !(stripeReady && checkoutHasItems);
+  }
+
+  renderCheckoutSummary()
+    .then((hasItems) => {
+      checkoutHasItems = hasItems;
+      updateSubmitState();
+    })
+    .catch((error) => {
+      displayError.textContent = error.message;
+      checkoutHasItems = false;
+      updateSubmitState();
+    });
 
   async function initStripe() {
     try {
@@ -2359,17 +2432,50 @@ function handleCheckout() {
 
       stripe = Stripe(publishableKey);
       const elements = stripe.elements();
-      cardElement = elements.create("card");
-      cardElement.mount("#card-element");
+      const elementStyle = {
+        base: {
+          color: "#183642",
+          fontFamily: 'Inter, "Avenir Next", system-ui, sans-serif',
+          fontSize: "16px",
+          "::placeholder": {
+            color: "#7c8e96"
+          }
+        },
+        invalid: {
+          color: "#ff6f7d"
+        }
+      };
 
-      cardElement.on("change", (event) => {
-        displayError.textContent = event.error ? event.error.message : "";
+      cardNumberElement = elements.create("cardNumber", {
+        showIcon: true,
+        placeholder: "4242 4242 4242 4242",
+        style: elementStyle
+      });
+      cardExpiryElement = elements.create("cardExpiry", {
+        placeholder: "MM / YY",
+        style: elementStyle
+      });
+      cardCvcElement = elements.create("cardCvc", {
+        placeholder: "CVC",
+        style: elementStyle
       });
 
-      submitButton.disabled = false;
+      cardNumberElement.mount("#card-number-element");
+      cardExpiryElement.mount("#card-expiry-element");
+      cardCvcElement.mount("#card-cvc-element");
+
+      [cardNumberElement, cardExpiryElement, cardCvcElement].forEach((element) => {
+        element.on("change", (event) => {
+          displayError.textContent = event.error ? event.error.message : "";
+        });
+      });
+
+      stripeReady = true;
+      updateSubmitState();
     } catch (error) {
       displayError.textContent = error.message;
-      submitButton.disabled = true;
+      stripeReady = false;
+      updateSubmitState();
     }
   }
 
@@ -2379,7 +2485,7 @@ function handleCheckout() {
   checkoutForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    if (!stripe || !cardElement) return;
+    if (!stripe || !cardNumberElement) return;
 
     submitButton.disabled = true;
     submitButton.textContent = "Processing...";
@@ -2429,7 +2535,14 @@ function handleCheckout() {
 
       const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
-          card: cardElement
+          card: cardNumberElement,
+          billing_details: {
+            name: document.getElementById("name").value.trim(),
+            email: document.getElementById("email").value.trim(),
+            address: {
+              postal_code: billingPostcodeInput ? billingPostcodeInput.value.trim() : ""
+            }
+          }
         }
       });
 
@@ -2455,8 +2568,8 @@ function handleCheckout() {
       window.location.href = "index.html";
     } catch (error) {
       await showPageAlert(`Payment failed: ${error.message}`, "Payment Failed");
-      submitButton.disabled = false;
       submitButton.textContent = "Complete Payment";
+      updateSubmitState();
     }
   });
 }

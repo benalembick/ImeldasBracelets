@@ -41,24 +41,101 @@
       <p class="section-copy">Fill in your details and complete payment for Imelda's bracelets.</p>
     </section>
 
-    <section class="checkout-form">
-      <form id="checkout-form">
-        <label for="name">Name</label>
-        <input id="name" name="name" type="text" placeholder="Your name" required />
+    <section class="checkout-layout" aria-label="Checkout details">
+      <aside class="order-summary" aria-labelledby="order-summary-title">
+        <div class="summary-header">
+          <div>
+            <p class="eyebrow">Order summary</p>
+            <h2 id="order-summary-title">Your bracelets</h2>
+          </div>
+          <span id="checkout-summary-count" class="summary-count">0 items</span>
+        </div>
 
-        <label for="email">Email</label>
-        <input id="email" name="email" type="email" placeholder="you@example.com" required />
+        <div id="checkout-summary-items" class="checkout-summary-items">
+          <p class="summary-empty">Loading your cart...</p>
+        </div>
 
-        <label for="address">Address</label>
-        <textarea id="address" name="address" rows="4" placeholder="Street address, city, postcode" required></textarea>
+        <div class="checkout-totals" aria-label="Order totals">
+          <div>
+            <span>Subtotal</span>
+            <strong id="checkout-subtotal">$0.00</strong>
+          </div>
+          <div>
+            <span>Shipping</span>
+            <strong id="checkout-shipping">Free</strong>
+          </div>
+          <div class="checkout-grand-total">
+            <span>Total</span>
+            <strong id="checkout-total">$0.00</strong>
+          </div>
+        </div>
+      </aside>
 
-        <div id="card-element"><!-- Stripe Elements will be inserted here --></div>
-        <div id="card-errors" role="alert"></div>
+      <div class="checkout-payment">
+        <section class="checkout-form" aria-labelledby="checkout-payment-title">
+          <form id="checkout-form">
+            <div class="checkout-form-section">
+              <div>
+                <p class="eyebrow">Contact</p>
+                <h2 id="checkout-payment-title">Payment details</h2>
+              </div>
 
-        <button class="button button-primary" type="submit" id="submit-button">Complete Payment</button>
-      </form>
-      <div class="checkout-note">
-        <p>Test payment mode: Use card number 4242 4242 4242 4242 with any future expiry and CVC.</p>
+              <div class="form-field">
+                <label for="name">Full name</label>
+                <input id="name" name="name" type="text" autocomplete="name" placeholder="Imelda Rivera" required />
+              </div>
+
+              <div class="form-field">
+                <label for="email">Email address</label>
+                <input id="email" name="email" type="email" autocomplete="email" placeholder="imelda@example.com" required />
+              </div>
+
+              <div class="form-field">
+                <label for="address">Shipping address</label>
+                <textarea id="address" name="address" rows="4" autocomplete="street-address" placeholder="Street address, suburb, state, postcode" required></textarea>
+              </div>
+            </div>
+
+            <div class="checkout-form-section">
+              <div>
+                <p class="eyebrow">Secure card payment</p>
+                <h2>Card information</h2>
+                <p class="field-help">Enter each card detail in its labelled field below.</p>
+              </div>
+
+              <div class="form-field">
+                <div class="payment-field-grid">
+                  <div class="form-field payment-card-number">
+                    <span class="field-label" id="card-number-label">Card number</span>
+                    <div class="stripe-field" id="card-number-element" aria-labelledby="card-number-label" aria-describedby="card-help card-errors"></div>
+                  </div>
+
+                  <div class="form-field">
+                    <span class="field-label" id="card-expiry-label">Expiry date</span>
+                    <div class="stripe-field" id="card-expiry-element" aria-labelledby="card-expiry-label" aria-describedby="card-help card-errors"></div>
+                  </div>
+
+                  <div class="form-field">
+                    <span class="field-label" id="card-cvc-label">Security code</span>
+                    <div class="stripe-field" id="card-cvc-element" aria-labelledby="card-cvc-label" aria-describedby="card-help card-errors"></div>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="billing-postcode">Postcode</label>
+                    <input id="billing-postcode" name="billing-postcode" type="text" autocomplete="postal-code" inputmode="text" placeholder="12345" required />
+                  </div>
+                </div>
+                <p id="card-help" class="field-help">Use the postcode attached to the cardholder's billing address.</p>
+                <div id="card-errors" role="alert"></div>
+              </div>
+            </div>
+
+            <button class="button button-primary" type="submit" id="submit-button">Complete Payment</button>
+          </form>
+        </section>
+        <div class="checkout-note">
+          <p>Test payment mode: Use card number 4242 4242 4242 4242 with any future expiry and CVC.</p>
+        </div>
       </div>
     </section>
   </main>
