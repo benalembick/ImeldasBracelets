@@ -1778,10 +1778,13 @@ button:disabled {
   .header-inner {
     min-height: 7.35rem;
     gap: 0.65rem;
+    justify-content: center;
     padding: 0.45rem 0 0.55rem;
   }
 
   .brand {
+    flex-basis: 100%;
+    justify-content: center;
     min-width: 0;
     max-width: 100%;
   }
@@ -1797,11 +1800,21 @@ button:disabled {
   }
 
   .nav-links {
-    display: none;
+    order: 2;
+    display: flex;
+    flex-basis: 100%;
+    justify-content: center;
+    gap: 0.2rem;
+    overflow-x: auto;
+    padding-bottom: 0.15rem;
   }
 
   .nav-links a {
-    font-size: 0.82rem;
+    flex: 0 0 auto;
+    min-height: 2rem;
+    padding: 0.35rem 0.42rem;
+    font-size: 0.78rem;
+    white-space: nowrap;
   }
 
   .hero-content,
